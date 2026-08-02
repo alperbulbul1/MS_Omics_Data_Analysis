@@ -1,0 +1,25 @@
+# configure.sh writes the resolved paths here; machine-specific, do not commit
+.configured
+
+# data is never redistributed — see docs/DATA.md
+*.csv
+*.tsv
+*.xlsx
+*.idat
+*.idat.gz
+*.txt.gz
+*.h5ad
+*.rds
+*.RDS
+
+# outputs
+figures/
+results/
+*.png
+*.pdf
+*.log
+
+.DS_Store
+__pycache__/
+.Rhistory
+.RData

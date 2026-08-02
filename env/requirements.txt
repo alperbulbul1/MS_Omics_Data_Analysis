@@ -1,0 +1,36 @@
+# Pinned to the environment in which the reported results were produced.
+# Captured from the live session, not from the manuscript text.
+# python==3.11.15
+GEOparse==2.0.4
+Pillow==12.2.0
+_python_==3.11.15
+adjustText==1.3.0
+anndata==0.12.11
+bbknn==1.6.0
+beautifulsoup4==4.14.3
+celltypist==1.7.1
+cellxgene-census==1.18.0
+gprofiler-official==1.0.0
+gseapy==1.1.13
+h5py==3.16.0
+igraph==0.11.9
+leidenalg==0.10.2
+matplotlib==3.10.8
+mygene==3.2.2
+natsort==8.4.0
+networkx==3.6.1
+neuroCombat==0.2.12
+numba==0.65.0
+numpy==2.4.3
+openpyxl==3.1.5
+pandas==2.3.3
+pyarrow==25.0.0
+requests==2.33.1
+scanpy==1.11.5
+scikit-learn==1.8.0
+scipy==1.17.1
+seaborn==0.13.2
+statsmodels==0.14.6
+tiledbsoma==2.3.0
+tqdm==4.67.3
+umap-learn==0.5.12
