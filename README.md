@@ -1,116 +1,141 @@
 # MS multi-omics re-analysis — analysis code
 
-Code for *"Inverse-concordant DNA-methylation × transcription integration across four omic layers
-prioritises ITGB2 and IKZF1 in multiple sclerosis"* (IJMS, under revision).
+Analysis code for the study prioritising *ITGB2* and *IKZF1* in multiple sclerosis by
+inverse-concordant DNA-methylation × transcription integration across four omic layers.
 
-This repository holds the **analysis pipeline only**. Manuscript-authoring utilities (LaTeX/DOCX
-patching, citation renumbering, figure relabelling) are deliberately excluded; 95 of the project's
-651 R/Python files are published here.
+Every script ships with the placeholders `__MS_GEO_ROOT__` (project root) and `__PYTHON_BIN__`
+(interpreter); `./configure.sh /path/to/data /path/to/python` substitutes both in place, and
+`./configure.sh --check` fails if any placeholder or author-specific path survives.
 
 ---
 
-## 1. Point it at your machine
+## `scripts/00_data/` — acquisition
 
-Every script was written against absolute paths. They ship with two placeholders, which
-`configure.sh` substitutes in place:
-
-```bash
-./configure.sh /path/to/MS_GEO_data /path/to/python
-./configure.sh --check
-```
-
-`--check` fails if any placeholder remains **or** if an author-specific path survives, so a
-misconfigured tree cannot be run by accident. Re-running with different values re-substitutes.
-
-## 2. Environment
-
-`env/r-packages.txt` and `env/requirements.txt` pin the versions that produced the reported
-results, captured from the live session rather than transcribed from the paper.
-
-**Read `env/OPTIONAL_AND_FALLBACKS.md` before assuming a package is required.** Eleven packages are
-imported somewhere but were *not installed* when the results were produced, and the scripts took a
-documented fallback path. The most consequential:
-
-| package | what actually ran |
+| file | what it does |
 |---|---|
-| `DEP` | not installed — the proteomic differential tests ran on the DEP-equivalent functions in `Proteomics/r_notebooks/helpers.R` (`filter_missval_R`, `vsn_with_fallback`, `moderated_t_safe`, `dep_completecase_de`) |
-| `wateRmelon` | not installed — BMIQ normalisation of the beta-only methylation series fell back to quantile normalisation |
-| `maxprobes` | not installed — cross-reactive probe removal used the built-in list |
+| `download_bulk_rnaseq.py` | Downloads the bulk-transcriptomic GEO series (727 usable expression samples). |
+| `download_methylation.py` | Downloads the methylation series listed in `Methylation_Target_Datasets.csv`, resuming partial files. |
+| `select_methylation_case_control.py` | Screens the candidate methylation studies for MS-vs-control designs and writes the target list. |
 
-## 3. Data
+## `scripts/01_transcriptome/` — bulk RNA differential expression
 
-No data is redistributed. `docs/DATA.md` lists every accession with the layer it feeds. In short:
-29 primary datasets — 14 bulk-transcriptomic GEO series, 8 Illumina 450K/EPIC methylation series
-plus GSE173787 (WGBS), 3 single-cell series, PRIDE PXD064570 and PXD045058, MassIVE MSV000096790,
-and the published UK Biobank-PPP Olink summary statistics.
+| file | what it does |
+|---|---|
+| `harmonize_rnaseq_v3.py` | Harmonises the RNA-seq series: per-dataset gene-ID → symbol mapping and metadata-based MS/HC assignment. |
+| `harmonize_microarray_v2.py` | Harmonises the array series: platform probe → HGNC symbol via GEO platform SOFT annotation and mygene, `max` per symbol. |
+| `merge_harmonized_v2.py` | Merges the RNA-seq and microarray tracks into one symbol × sample matrix. |
+| `build_matrices.py` | Builds the per-series expression matrices with Ensembl → symbol resolution. |
+| `build_global_matrices.py` | Builds the combined global matrix, parsing SOFT headers for MS/HC labels without loading the full tables. |
+| `merge_and_correct.py` | Merges the recovered supplementary datasets into the global matrix and re-runs neuroComBat and limma. |
+| **`restore_zeroed_series.py`** | **Repair step that must run BEFORE `correct_and_normalize.py`.** Four series (GSE190847, GSE137143, GSE172009, GSE207680; 214 of 552 columns) were carried as exactly zero in the March matrix; this restores them from the harmonised per-series matrices. Two fatal self-checks: no all-zero column may survive, and the PBMC and whole-blood strata must reproduce byte-identically. |
+| `correct_and_normalize.py` | Per-dataset normalisation and ComBat batch correction with disease status protected; prefers the repaired matrix and raises on any all-zero dataset. |
+| `rerun_verified_case_control.py` | Re-runs the case-control analyses against the verified dataset inventory. |
+| `00_run_all.R` | Runs every transcriptome step in order. |
+| `01_pbmc_de.R` … `05_whole_blood_de.R` | Per-stratum limma-trend differential expression: PBMC, T cells, B cells, brain white matter, whole blood. |
+| `06_pbmc_ifnb_de.R` | IFN-β-versus-baseline PBMC contrast. This is a **treatment-response** contrast and is deliberately excluded from the inverse-concordance disease scan. |
+| `07_total_combined_de.R` | Pan-tissue combined model (`~ tissue + condition`) over the pooled case-control strata. |
+| `08_cross_stratum_master.R` | Cross-stratum summary table. |
+| `run_expression_subgroup_limma.R` | Generic subgroup limma runner (`meta.csv matrix.csv out_dir [precorrected]`). |
+| `run_stratified_omics.py` | Drives the per-stratum runs across both layers, preferring the IDAT-preprocessed methylation input and falling back to the combined matrix. |
+| `infer_sex_from_expression.py` | Infers sample sex from XIST and Y-linked gene expression where the deposit does not state it. |
+| `sex_adjusted_sensitivity_rna.R` | Sex-adjusted sensitivity re-run of the RNA layer for the candidate panel. |
+| `helpers.R` | Shared paths and utilities for the transcriptome scripts. |
 
-## 4. Layout and run order
+## `scripts/02_methylation/` — DNA methylation
 
-```
-scripts/
-  00_data/           acquisition, harmonisation, matrix assembly
-  01_transcriptome/  per-stratum limma DE + pan-tissue combined model
-  02_methylation/    minfi/ComBat preprocessing, DMP, mCSEA, gene-level aggregation
-  03_proteomics/     CSF and brain differential abundance (complete-case)
-  04_singlecell/     cohort processing (GSE118257 / GSE127969 / GSE144744) + donor-level pseudobulk
-  05_integration/    STRING PPI + g:Profiler pathway analysis, data-source table, omics inventory
-  06_figures/        one script per manuscript figure (figure1_workflow.py … figure7_string_network.py)
-```
+| file | what it does |
+|---|---|
+| `preprocess_methylation_arrays.R` | minfi preprocessing of the IDAT-based array series. |
+| `normalize_beta_only.R` | Normalisation path for the series deposited as beta/signal matrices rather than IDATs. |
+| `build_methylation_matrix.py` | Assembles the per-series matrices onto common probes. |
+| `run_all_methylation_combat.R` | ComBat batch correction across all methylation series with disease status protected. |
+| `00_run_all.R` | Runs every methylation step in order. |
+| `01_tcells_meth_dmp.R` … `05_combined_meth_dmp.R` | Per-stratum differentially methylated positions: T cells, whole-blood dimethyl fumarate, whole-blood ocrelizumab, T-cell remission, combined. |
+| `06_mcsea_promoter_analysis.R`, `run_mcsea_combat.R` | mCSEA promoter and gene-body region enrichment on the ComBat-corrected M-values. |
+| `07_brainwm_rna_vs_meth.R` | Brain white-matter RNA-versus-methylation concordance. |
+| `08_cross_stratum_meth_master.R` | Cross-stratum methylation summary. |
+| **`09_inverse_concordance_scan.R`** | **The core filter.** Scans for genes significant in both layers with opposite directions across matched tissue strata. The IFN-β PBMC contrast is excluded here by design. |
+| `10_inverse_proteomics_validation.R` | Proteomic anchoring of the inverse-concordant pool. |
+| `11_inverse_scRNA_validation.py` | Single-cell anchoring of the inverse-concordant pool. |
+| `12_celltype_4layer_master.py` | Four-layer × cell-type master matrix. |
+| `13_perstudy_scRNA_validation.py` | Per-study single-cell breakdown. |
+| `15_genelevel_weighting_corrected.R` | Gene-level signed-Stouffer aggregation with the unweighted probe mean as the reported effect, plus the 1/SE-weighted and inverse-variance alternatives. |
+| `promoter_vs_body_test.R` | Direct promoter-versus-gene-body compartment test, for genes where mCSEA has too few CpGs to form a testable region. |
+| **`rebuild_S2_94genes.py`** | Rebuilds Supplementary Table S2 for the current 94-gene pool in one pass: per-gene statistics, methylation-compartment flag (promoter-confirmed / promoter-only / composite-only) and the promoter-only sensitivity analysis. **Supersedes `update_S2_promoter_flag.py` and `update_S2_weighting.py`, which patched an older 82-gene sheet.** |
+| `run_methylation_subgroup_limma.R` | Generic subgroup limma runner for the methylation layer. |
+| `infer_sex_GSE88824_chrXY.R` | Infers sex for GSE88824, the one array series without deposited sex, from chrX/chrY signal. |
+| `sex_adjusted_sensitivity.R` | Sex-adjusted sensitivity re-run of the methylation layer. |
+| `helpers.R` | Shared paths and utilities for the methylation scripts. |
 
-`docs/RUN_ORDER.md` gives the dependency order with the inputs and outputs of each step, and flags
-the steps that are **not safe to re-run blindly** — several overwrite their own inputs.
+## `scripts/03_proteomics/` — CSF and brain differential abundance
 
-## 5. Scope
+| file | what it does |
+|---|---|
+| `00_run_all.R` | Runs the proteomic steps in order; invokes the complete-case scripts, which are the reported analysis. |
+| **`01cc_csf_astral_completecase.R`** | CSF Orbitrap Astral DIA-MS differential abundance. Tested with DEP **without imputation**, with DEP's `fdrtool` q-values replaced by Benjamini–Hochberg. |
+| **`02cc_csf_timstof_completecase.R`** | The same for the timsTOF CSF platform. |
+| `04cc_magliozzi_brain_completecase.R` | Brain white-matter proteome, complete-case. |
+| `dep_bh_equivalence_check.R` | Shows that the reported result is equivalent to running DEP itself at the level of effect estimates, and that the only material difference is `fdrtool` versus BH. |
+| `03_csf_cross_platform_meta.R` | Meta-analysis across the two CSF platforms. |
+| `05_t_lineage_meta.R` | T-lineage proteomic meta-analysis. |
+| `06_pegram_gse32915_de.R` | GSE32915 differential expression. |
+| `07_brainwm_rna_meth_rerun.R` | Brain white-matter RNA/methylation re-run. |
+| `08_per_group_consistency.R` | Per-group consistency checks. |
+| `09_cross_assay_lxn.R` | Cross-assay *LXN* comparison. |
+| `10_master_validation.R` | Master proteomic validation table. |
+| `11_itgb2_csf_pleocytosis.R` | Tests why *ITGB2* is detected more often in MS than in control CSF, and shows this tracks leukocyte count rather than an MS-specific property of the protein. |
+| `build_RDEP_CC_adapters.py` | Builds the figure-adapter tables from the complete-case proteomic output. |
+| `helpers.R` | Shared paths and utilities for the proteomic scripts. |
 
-This release contains **only** code on the path to the results the paper reports. Dataset-search
-scripts from the project's exploratory phase, code for data that never entered the paper
-(E-MTAB-69, CELLxGENE census queries), and QC-only plotting were removed alongside the
-superseded analyses. Analyses
-that the revision replaced are not included — notably the MinProb-imputed proteomic variants
-(withdrawn because `ITGB2` is detected in 71.6 % of MS but only 63.1 % of control CSF samples,
-so left-censored imputation manufactured a significant MS-up call the measured values do not
-support), the dependence-aware methylation weighting experiments, and the legacy v1
-acquisition track. The proteomic layer runner `00_run_all.R` invokes the complete-case
-scripts (`*cc_*_completecase.R`), which are the reported analysis.
+## `scripts/04_singlecell/` — single-cell processing and donor-level pseudobulk
 
-## 6. Known reproducibility limits
+| file | what it does |
+|---|---|
+| `download_singlecell_datasets.py` | Downloads the single-cell h5ad files from CELLxGENE Discover. |
+| `process_GSE118257_jakel_brain.py` | Jäkel et al. 2019 MS brain snRNA-seq, using the deposited final clustering. |
+| `process_GSE127969_beltran_csf.py` | Beltrán et al. 2019 CSF and PBMC scRNA-seq from monozygotic twins discordant for MS. |
+| `process_GSE144744_kaufmann_pbmc.py` | Kaufmann et al. PBMC and CSF scRNA-seq: 62 donors, 497,706 cells. |
+| `process_GSE144744_kaufmann_genes.py` | Companion pass over the full count matrix for per-gene extraction. |
+| `plot_GSE144744_kaufmann_celltypes.py` | Re-renders the cell-type UMAPs from the cached object. |
+| `build_pb_counts.py` | Donor × cell-type pseudobulk as the **sum of raw integer UMI counts** (the muscat standard). |
+| `build_pb_lognorm.py` | Pseudobulk from the deposited log-normalised matrix. |
+| `build_pb_norm.py` | Normalisation-based pseudobulk, as a sensitivity comparison. |
+| `build_pb_brain_csf.py` | Pseudobulk inputs for the brain and CSF/blood cohorts on the same footing. |
+| `pseudobulk_muscat_style.R` | Donor-level differential-state analysis following the muscat/Squair decision rules. |
+| `pseudobulk_brain_csf.R` | The same for the brain and CSF/blood cohorts. |
+| `pseudobulk_norm_compare.R` | Aggregation-sensitivity comparison: does the pseudobulk unit change the conclusions? |
+| `pseudobulk_DA.R` | Differential **abundance** (cell-type proportions), analysed separately from differential state. |
+| `run_pseudobulk_reanalysis.py` | Donor-level MS-versus-HC re-analysis for the Tier-1 candidates, addressing cell-level p-value inflation. |
 
-Stated plainly, because they are real and a reader will otherwise find them:
+## `scripts/05_integration/` — network, pathway and inventory
 
-1. **Two upstream artefacts cannot be regenerated from the scripts.**
-   `Expression_Data/Corrected_Metadata_ComBat.csv` was reduced from 552 to 472 rows after the
-   matching expression matrix was written, and no script performs that reduction;
-   `Global_Harmonized_Metadata.csv` was later overwritten down to 150 rows, so the 552-sample
-   combined matrix cannot be rebuilt from it. Both files are inputs to the transcriptome layer.
-   The analysed strata under `Stratified_Analyses/Expression/` are unaffected and self-consistent:
-   they hold 462 samples across 13 series, and every reported RNA result derives from them.
-2. **Two harmonisation steps are network-dependent.** `harmonize_microarray_v2.py` resolves
-   probe → gene symbol maps live from GEO platform SOFT files and from mygene.info, so the gene
-   universe can drift with the date of the run.
-3. **Several scripts overwrite their own inputs** and are not idempotent — `RUN_ORDER.md` marks
-   each one.
-4. **One step streams a ~16 GB matrix** (`04_singlecell/`); budget memory accordingly.
-5. **Four intermediate tables have no producing script anywhere**, so the steps that read them
-   cannot be re-derived from this release. Each was traced and is listed rather than hidden:
-   - `Poster_v2/figures/scrna_WILCOXON_v1.tsv` — the cell-level Wilcoxon scan feeding
-     `06_figures/figure5_singlecell.py` and several Supplementary Table S2 values (it holds the
-     quoted IKZF1 / T-cell FDR 9.4 × 10⁻⁷¹). Regenerated by an ad-hoc session after the Kaufmann
-     UMAP repair; no script survived.
-   - `Poster_v2/figures/scrna_PSEUDOBULK_COMPARISON.tsv` — feeds workbook sheet
-     `08_CellLevel_vs_Donor`. `04_singlecell/run_pseudobulk_reanalysis.py` produces its 192-row
-     parent table and is shipped, but the filter-and-rename step that reduces it to the 27 rows
-     used was never saved.
-   - ~~`Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv`~~ — **RESOLVED.** Nothing reads this
-     orphan any more. Figure 2 panel G now reads `Transcriptome/results/07_pan_tissue_DE.tsv`,
-     the output of `01_transcriptome/07_total_combined_de.R` and the same table consumed by the
-     inverse-concordance scan, the four-layer master and Figure 6. The two disagreed on two
-     genes: under the orphan *IKZF1* was pan-tissue-significant (FDR 0.036) and *HLA-E* was not
-     (0.295); under the canonical table *IKZF1* is not (0.573) and *HLA-E* is (0.012). The
-     manuscript was corrected to the canonical values, so every panel of Figure 2 is now
-     regenerable from this deposit.
-   - `Expression_Data/Corrected_Metadata_ComBat.csv` — see limitation 1 above.
+| file | what it does |
+|---|---|
+| `ppi_analysis.py` | STRING physical-only protein–protein interaction query plus GeneMANIA, for the candidate panel. |
+| `build_data_sources_table.py` | Generates Supplementary Table S1, the per-study data-source catalogue. |
+| `export_used_omics_inventory.py` | Exports the dataset inventory actually used by the methylation and expression layers. |
 
-## 7. Citation
+## `scripts/06_figures/` — one script per manuscript figure
 
-If you use this code, please cite the paper. Data citations belong to the original depositors,
-listed per accession in `docs/DATA.md`.
+| file | what it does |
+|---|---|
+| `figure_constants.py` | Single source of truth for the figures: canonical gene panels, tier membership and dataset metadata. |
+| `figure1_workflow.py` | Figure 1, the pipeline schematic. |
+| `figure2_rna_volcanoes.py` | Figure 2, per-stratum RNA volcanoes plus the tissue-adjusted pan-tissue panel. |
+| `figure3_methylation.py` | Figure 3, gene-level methylation panels. |
+| `figure4_proteomics.py` | Figure 4, proteomic validation across the CSF, brain and plasma compartments. |
+| `figure5_singlecell.py` | Figure 5, single-cell assessment across the three cohorts. |
+| `figure6_intersection_heatmap.py` | Figure 6, the four-layer × tissue intersection matrix. |
+| `figure7_string_network.py` | Figure 7, the STRING physical-interaction network and pathway enrichment. |
+| `build_pseudobulk_workbook.py` | Assembles the donor-level pseudobulk results into one Excel workbook. |
+
+---
+
+## Supporting files
+
+| file | what it does |
+|---|---|
+| `configure.sh` | Substitutes `__MS_GEO_ROOT__` and `__PYTHON_BIN__` across `scripts/`; `--check` verifies no placeholder or author path remains. |
+| `docs/RUN_ORDER.md` | Dependency order with each step's inputs and outputs, and which steps are not safe to re-run blindly. |
+| `docs/DATA.md` | Every accession with the layer it feeds. No data is redistributed. |
+| `env/r-packages.txt`, `env/requirements.txt` | Package versions captured from the session that produced the reported results. |
