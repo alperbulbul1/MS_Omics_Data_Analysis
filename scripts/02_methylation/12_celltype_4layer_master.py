@@ -207,15 +207,17 @@ meth_long = pd.concat([meth_long, mc_long], ignore_index=True)
 
 # ---- Proteomics ----
 prot_assays = [
-    (PT / "CSF_Astral_R_DEP_results.tsv", "Prot CSF Astral"),
-    (PT / "CSF_timsTOF_R_DEP_results.tsv", "Prot CSF timsTOF"),
-    (PT / "CSF_combined_R_ComBat_DE.tsv", "Prot CSF combined"),
+    (PT / "CSF_Astral_CC_results.tsv", "Prot CSF Astral"),
+    (PT / "CSF_timsTOF_CC_results.tsv", "Prot CSF timsTOF"),
+    # EXCLUDED under the no-imputation decision: CSF_combined_R_ComBat_DE.tsv is the only
+    # remaining table built on MinProb-imputed input (03_csf_cross_platform_meta.R).
+#     (PT / "CSF_combined_R_ComBat_DE.tsv", "Prot CSF combined"),
     (PT / "T_lineage_R_combined_DE.tsv", "Prot T-lineage meta"),
     (PT / "Pegram_R_DE_gene.tsv", "Prot Pegram NK8"),
-    (PT / "Magliozzi_R_DEP_MS_CTX_vs_ODC_CTX.tsv", "Prot Brain CTX"),
-    (PT / "Magliozzi_R_DEP_MS_NAWM_vs_ODC_WM.tsv", "Prot Brain NAWM"),
-    (PT / "Magliozzi_R_DEP_MS_WML_vs_ODC_WM.tsv", "Prot Brain WML-vs-WM"),
-    (PT / "Magliozzi_R_DEP_MS_WML_vs_MS_NAWM.tsv", "Prot Brain WML-vs-NAWM"),
+    (PT / "Magliozzi_CC_MS_CTX_vs_ODC_CTX.tsv", "Prot Brain CTX"),
+    (PT / "Magliozzi_CC_MS_NAWM_vs_ODC_WM.tsv", "Prot Brain NAWM"),
+    (PT / "Magliozzi_CC_MS_WML_vs_ODC_WM.tsv", "Prot Brain WML-vs-WM"),
+    (PT / "Magliozzi_CC_MS_WML_vs_MS_NAWM.tsv", "Prot Brain WML-vs-NAWM"),
 ]
 prot_long = pd.concat([load_tx(fp, n) for fp, n in prot_assays if fp.exists()],
                       ignore_index=True)

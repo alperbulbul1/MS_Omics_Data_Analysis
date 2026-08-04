@@ -54,12 +54,14 @@ fwrite(summ, file.path(OUT_DIR, "CrossOmics_Master_Table_R.tsv"), sep = "\t")
 
 
 # ---- Triple-validated set ----
-csf_fp  <- file.path(OUT_DIR, "CSF_Astral_R_DEP_results.tsv")
+csf_fp  <- file.path(OUT_DIR, "CSF_Astral_CC_results.tsv")
 rna_fp  <- file.path(OUT_DIR, "BrainWM_R_RNA_DE.tsv")
 meth_fp <- file.path(PROT_ROOT, "processed", "rerun",
                       "BrainWM_meth_genelevel_rerun.tsv")
 
-if (file.exists(csf_fp) && file.exists(rna_fp) && file.exists(meth_fp)) {
+for (.f in c(csf_fp, rna_fp, meth_fp)) if (!file.exists(.f))
+  stop("missing input for the triple-validated set: ", .f)   # was a silent skip
+if (TRUE) {
   csf  <- fread(csf_fp);  setnames(csf,  c("logFC","adj.P.Val"),
                                      c("CSF_log2FC","CSF_FDR"), skip_absent = TRUE)
   rna  <- fread(rna_fp);  setnames(rna,  c("logFC","adj.P.Val"),

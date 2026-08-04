@@ -15,7 +15,7 @@ MASS==7.3.65
 Matrix==1.7.5
 S4Vectors==0.50.1
 SummarizedExperiment==1.42.0
-_R_==4.6.0
+# interpreter: R 4.6.0
 affy==1.90.0
 cowplot==1.2.0
 data.table==1.18.4

@@ -1,4 +1,9 @@
 #!/usr/bin/env Rscript
+## SUPERSEDED / STILL IMPUTED. This cross-platform ComBat meta calls the MinProb helper on
+## both platforms before concatenation, which is the procedure the revision withdrew: it is
+## what manufactured the spurious MS-up ITGB2 CSF call. Its output
+## CSF_combined_R_ComBat_DE.tsv is no longer read by any validation script and no reported
+## number depends on it. Retained for provenance only.
 ## 03_csf_cross_platform_meta.R  —  generated from notebook spec
 ## Run: Rscript 03_csf_cross_platform_meta.R
 

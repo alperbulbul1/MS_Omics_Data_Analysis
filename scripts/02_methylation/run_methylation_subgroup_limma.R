@@ -33,7 +33,11 @@
 suppressPackageStartupMessages({
   library(limma)
   library(minfi)
-  library(DMRcate)
+  # DMRcate is optional: no DMR-level result is reported, and it is absent from
+  # env/r-packages.txt. Loading it unguarded aborted this worker at startup for anyone who
+  # installed exactly what the manifest pins. STEP 4 (DMR calling) is skipped when absent.
+  have_DMRcate <- requireNamespace("DMRcate", quietly = TRUE)
+  if (have_DMRcate) library(DMRcate)
   library(mCSEA)
   library(data.table)
   library(matrixStats)

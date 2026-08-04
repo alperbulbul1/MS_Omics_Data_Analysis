@@ -33,7 +33,7 @@ for x in [1.475,3.775,6.075,8.425]: arr(x,y, x,y-0.5)
 y=9.1
 box(0.4,y,2.15,1.40,"Per-dataset norm\n(quantile / log₂-CPM)\nComBat batch\n+ limma-trend",CP,8.5)
 box(2.7,y,2.15,1.40,"minfi β→M\nComBat\nlimma DMP\n+ mCSEA",CP,8.5)
-box(5.0,y,2.15,1.40,"scanpy QC\nlog-norm · 2k HVG\nHarmony/scVI\nLeiden",CP,8.5)
+box(5.0,y,2.15,1.40,"scanpy QC\nlog-norm · 3k HVG\nBBKNN\nLeiden",CP,8.5)
 box(7.3,y,2.25,1.40,"log₂ LFQ/DIA\nlimma::removeBatchEffect\nDEP ≥50% filter\n+ raw-matrix rescue",CP,6.7)
 for x in [1.475,3.775,6.075,8.425]: arr(x,y, x,y-0.4)
 

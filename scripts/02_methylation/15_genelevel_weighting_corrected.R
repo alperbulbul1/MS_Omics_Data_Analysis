@@ -42,8 +42,14 @@
 suppressPackageStartupMessages({
   library(data.table); library(dplyr); library(limma)
 })
-setwd("__MS_GEO_ROOT__/Methylation/r_notebooks")
-source("helpers.R")
+# The author's private working copy is not part of the release; the shipped helper sits next
+# to this file. Resolve it from this script's own path instead of chdir-ing into a data dir.
+source(local({
+  a <- commandArgs(trailingOnly = FALSE)
+  f <- sub("^--file=", "", a[grep("^--file=", a)])
+  d <- if (length(f)) dirname(normalizePath(f)) else dirname(normalizePath(sys.frame(1)$ofile))
+  file.path(d, "helpers.R")
+}))
 
 RES <- "__MS_GEO_ROOT__/Methylation/results"
 PANEL <- c("ITGB2", "CD79B", "IKZF1", "LXN", "SH3BP4",

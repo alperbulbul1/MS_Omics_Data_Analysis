@@ -21,7 +21,7 @@ only 31 sig genes and no Inverse-concordant Tier-1 hit.)
 
 Highlights (only genes that ACTUALLY pass BH-FDR<0.05 are labelled):
   • Inverse-concordant Tier-1 (2): ITGB2 · IKZF1 — RED *
-  • Tier-2 auxiliary inverse-concordant (10): CD79B · LXN · CASP6 · CASP8 · DGKQ · MX1 · IFIT1 · NUP210 · RUNX3 · SH3BP4 — ORANGE ◆
+  • Tier-2 auxiliary inverse-concordant (11): CD79B · LXN · HLA-E · CASP6 · CASP8 · DGKQ · MX1 · IFIT1 · NUP210 · RUNX3 · SH3BP4 — ORANGE ◆
   • Tier-2 non-concordant proteomic anchors (5) — PURPLE
 """
 from pathlib import Path
@@ -150,7 +150,7 @@ def gene_volcano(ax, path, title, sample_n, *, fc_col="mean_logFC",
 
 # ── RNA × methylation concordance scatter (replaces stacked bar) ────────────
 def inv_scatter(ax):
-    # The 82-gene inverse-concordant DISCOVERY POOL (per-stratum: best RNA x best methylation,
+    # The 94-gene inverse-concordant DISCOVERY POOL (per-stratum: best RNA x best methylation,
     # opposite sign in both layers) — the same pool used throughout the manuscript.
     inv = pd.read_csv(INV_FILE, sep="\t")
     inv["g"]  = inv.gene.astype(str).str.upper()

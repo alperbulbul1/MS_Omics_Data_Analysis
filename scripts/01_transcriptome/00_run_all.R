@@ -14,7 +14,13 @@
 ##       --ExecutePreprocessor.kernel_name=ir_methylation \
 ##       --ExecutePreprocessor.timeout=900 0?_*.ipynb
 
-HERE <- dirname(normalizePath(sys.frame(1)$ofile))
+HERE <- local({
+  # sys.frame(1)$ofile only exists under source(); this file's own header documents
+  # `Rscript 00_run_all.R`, which would abort here. Resolve from --file= when run that way.
+  a <- commandArgs(trailingOnly = FALSE)
+  f <- sub("^--file=", "", a[grep("^--file=", a)])
+  if (length(f)) dirname(normalizePath(f)) else dirname(normalizePath(sys.frame(1)$ofile))
+})
 setwd(HERE)
 
 SCRIPTS <- c(

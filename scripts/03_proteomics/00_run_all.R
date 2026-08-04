@@ -20,12 +20,19 @@
 ##       --ExecutePreprocessor.timeout=3600 \
 ##       0?_*.ipynb 10_*.ipynb
 
-HERE <- dirname(normalizePath(sys.frame(1)$ofile))
+HERE <- local({
+  # sys.frame(1)$ofile only exists under source(); this file's own header documents
+  # `Rscript 00_run_all.R`, which would abort here. Resolve from --file= when run that way.
+  a <- commandArgs(trailingOnly = FALSE)
+  f <- sub("^--file=", "", a[grep("^--file=", a)])
+  if (length(f)) dirname(normalizePath(f)) else dirname(normalizePath(sys.frame(1)$ofile))
+})
 setwd(HERE)
 
 SCRIPTS <- c(
   "08_per_group_consistency.R",   # no I/O dep, runs first
   "04cc_magliozzi_brain_completecase.R",  # local xlsx only; complete-case, no imputation
+
   "06_pegram_gse32915_de.R",      # GEOquery download GSE32915
   "05_t_lineage_meta.R",          # GEOquery GSE32915+GSE78244 (cache hits 06)
   "01cc_csf_astral_completecase.R",       # 79 MB matrix; complete-case, no imputation
@@ -52,3 +59,12 @@ for (s in SCRIPTS) {
   }
 }
 cat("\nAll done.\n")
+
+# The adapter is the only step that converts the complete-case tables into the RDEP_CC layout
+# that Figures 4 and 6 read; without it a clean run leaves both figures without inputs.
+adapter <- file.path(HERE, "build_RDEP_CC_adapters.py")
+if (file.exists(adapter)) {
+  message("Running build_RDEP_CC_adapters.py")
+  st <- system2("__PYTHON_BIN__", adapter)
+  if (st != 0) stop("build_RDEP_CC_adapters.py failed with status ", st)
+} else stop("missing: ", adapter)

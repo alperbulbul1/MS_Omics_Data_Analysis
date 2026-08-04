@@ -41,23 +41,26 @@ print(head(inv, 10))
 # Load all R proteomics results
 proteomics_assays <- list(
   list(name = "CSF Astral (R/DEP)",
-       fp = file.path(META, "CSF_Astral_R_DEP_results.tsv")),
+       fp = file.path(META, "CSF_Astral_CC_results.tsv")),
   list(name = "CSF timsTOF (R/DEP)",
-       fp = file.path(META, "CSF_timsTOF_R_DEP_results.tsv")),
-  list(name = "CSF combined (R/ComBat)",
-       fp = file.path(META, "CSF_combined_R_ComBat_DE.tsv")),
+       fp = file.path(META, "CSF_timsTOF_CC_results.tsv")),
+  ## EXCLUDED under the no-imputation decision: CSF_combined_R_ComBat_DE.tsv is the only
+  ## remaining table built on MinProb-imputed input (03_csf_cross_platform_meta.R), and
+  ## left-censored imputation is what manufactured the withdrawn ITGB2 CSF call.
+  ## list(name = "CSF combined (R/ComBat)",
+  ## fp = file.path(META, "CSF_combined_R_ComBat_DE.tsv")),
   list(name = "T-lineage meta (R)",
        fp = file.path(META, "T_lineage_R_combined_DE.tsv")),
   list(name = "Pegram NK8 (R)",
        fp = file.path(META, "Pegram_R_DE_gene.tsv")),
   list(name = "Brain CTX (Magliozzi)",
-       fp = file.path(META, "Magliozzi_R_DEP_MS_CTX_vs_ODC_CTX.tsv")),
+       fp = file.path(META, "Magliozzi_CC_MS_CTX_vs_ODC_CTX.tsv")),
   list(name = "Brain NAWM (Magliozzi)",
-       fp = file.path(META, "Magliozzi_R_DEP_MS_NAWM_vs_ODC_WM.tsv")),
+       fp = file.path(META, "Magliozzi_CC_MS_NAWM_vs_ODC_WM.tsv")),
   list(name = "Brain WML vs ctrl (Magliozzi)",
-       fp = file.path(META, "Magliozzi_R_DEP_MS_WML_vs_ODC_WM.tsv")),
+       fp = file.path(META, "Magliozzi_CC_MS_WML_vs_ODC_WM.tsv")),
   list(name = "Brain WML vs NAWM (Magliozzi)",
-       fp = file.path(META, "Magliozzi_R_DEP_MS_WML_vs_MS_NAWM.tsv"))
+       fp = file.path(META, "Magliozzi_CC_MS_WML_vs_MS_NAWM.tsv"))
 )
 
 rows <- list()

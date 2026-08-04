@@ -7,6 +7,7 @@ corresponding layer. Sample counts are the post-QC numbers used in the paper.
 |---|---|---|---|---|---|---|
 | Bulk transcriptomics | GSE103005 | Yang et al. 2022 | Whole blood | HT-12 v4 (Array) | 8 | 12 |
 | Bulk transcriptomics | GSE138064 | Hagan et al. 2020 | PBMC + WB | HTA-2.0 (Array) | 64 | 8 |
+| Bulk transcriptomics | GSE137143 | — | CD4 + CD8 T cells | RNA-seq | 76 | 4 |
 | Bulk transcriptomics | GSE172009 | Unpublished | CD4 T | NovaSeq (RNA-seq) | 4 | 4 |
 | Bulk transcriptomics | GSE173789 | Aktas et al. 2022 | B cells | HiSeq X (RNA-seq) | 23 | 14 |
 | Bulk transcriptomics | GSE190847 | Kular et al. 2023 | B cells | Clariom-D (Array) | 93 | 28 |
@@ -49,12 +50,9 @@ corresponding layer. Sample counts are the post-QC numbers used in the paper.
 - Two methylation series, **GSE106648** and **GSE40360**, deposit no IDATs; they enter from the
   depositor-processed matrices and therefore bypass the detection-p probe filter applied to the
   other six array series. See Methods 4.3.
-- **Two series are downloaded and harmonised but enter no reported analysis**, and are therefore
-  not among the 29 datasets above. They are fetched by `00_data/...download_bulk_rnaseq.py`
+- **One series is downloaded and harmonised but enters no reported analysis**, and is therefore
+  not among the datasets above. They are fetched by `00_data/...download_bulk_rnaseq.py`
   because `harmonize_rnaseq_v3.py` processes them upstream of the point at which they are
   dropped, so the pipeline will not run without them:
-  - `GSE137143` — 81 samples, 77 MS / 4 HC. Four controls cannot support a case-control
-    contrast; under ComBat the series is a batch↔condition confound. Removed from the study
-    during revision.
   - `GSE211739` — 10 samples, 4 MS / 6 HC, iPSC-derived oligodendrocytes. Present in the
     472-sample batch-corrected discovery matrix but in no analysis stratum.

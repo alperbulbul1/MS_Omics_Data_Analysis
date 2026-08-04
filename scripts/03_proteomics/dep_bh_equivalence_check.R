@@ -45,7 +45,7 @@ suppressPackageStartupMessages({
 
 ROOT <- "__MS_GEO_ROOT__"
 PROT <- file.path(ROOT, "Proteomics")
-source(file.path(ROOT, "MS_Omics_Data_Anaysis", "scripts", "03_proteomics", "helpers.R"))
+source("helpers.R")   # layer convention: run from scripts/03_proteomics/
 
 if (!requireNamespace("DEP", quietly = TRUE)) {
   cat("DEP is not installed. It was removed from Bioconductor at release 3.23.\n",

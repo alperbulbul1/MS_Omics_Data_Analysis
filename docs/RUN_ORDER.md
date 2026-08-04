@@ -219,7 +219,7 @@ generators are named after the manuscript figure they produce.
    > Silently skips any missing stratum TSV (message + next) rather than failing, so a partial run yields a quietly incomplete summary. This table is cited for the CTSZ / LXN DMF FDRs.
 
 78. `02_methylation/09_inverse_concordance_scan.R` (R) **[!]**  
-   The discovery step: scans all 7 transcriptome strata against the two methylation sources (05 gene-level Stouffer, 06 mCSEA promoter NES) for joint-FDR<0.05 opposite-sign genes. Produces the 82-gene inverse-concordant discovery poo
+   The discovery step: scans all 6 transcriptome strata (the IFN-beta PBMC contrast is excluded as a treatment-response, not MS-vs-control, comparison) against the two methylation sources (05 gene-level Stouffer, 06 mCSEA promoter NES) for joint-FDR<0.05 opposite-sign genes. Produces the 82-gene inverse-concordant discovery poo
    → INVERSE_CONCORDANT_full_pairings.tsv, INVERSE_CONCORDANT_by_gene.tsv, INVERSE_CONCORDANT_by_gene_by_stratum.tsv
    > CROSS-LAYER: requires the full Transcriptome/results/ set. Uses mean_logFC = NES * 0.1 as a pseudo-effect-size for the mCSEA source - an arbitrary rescale that only affects the sign test, but it is undocumented in the manuscript. INVERSE_CONCORDANT_by_gene.tsv is the '82 genes' r
 
@@ -300,20 +300,21 @@ generators are named after the manuscript figure they produce.
    Shared library sourced by every r_notebooks script. Defines PROJ_ROOT/PROT_ROOT/OUT_DIR/FIG_DIR/CACHE_DIR, the candidate gene sets (CROSS_OMICS/RECURRING/PAPER_TOP/ECM_FAMILY), and the DEP-EQUIVALENT functions that actually run in
    > Not standalone; must be sourced with cwd = Proteomics/r_notebooks. Hardcodes PROJ_ROOT at line 21.
 
-5b. `03_proteomics/dep_bh_equivalence_check.R` (R)  
-   VERIFICATION, not part of the reported pipeline. Runs DEP itself on the CSF Astral matrix with DEP::impute omitted, and compares it with the reported complete-case limma result. Establishes that the two are the same test: identical fold changes (Pearson r = 1.000), identical p-value ranking (Spearman rho = 0.9999), and, once DEP's p-values are BH-adjusted, 955 significant proteins against the 941 reported, agreeing on 1,983 of 1,995 shared proteins (99.4%).
+5c. `03_proteomics/dep_bh_equivalence_check.R` (R)  
+   VERIFICATION, not part of the reported pipeline. Runs DEP itself on the CSF Astral matrix with DEP::impute omitted, and compares it with the reported complete-case limma result. Establishes that the two are the same test: identical fold changes (Pearson r = 1.000), identical p-value ranking (Spearman rho = 0.9999), and, once DEP's p-values are BH-adjusted, 955 significant proteins - which is what the manuscript now reports, the 941 being the superseded complete-case-limma count, agreeing on 1,983 of 1,995 shared proteins (99.4%).
    → Proteomics/processed/META/CSF_Astral_DEP_BH_check.tsv
    > DEP::test_diff hard-codes fdrtool for multiple-testing adjustment and exposes no argument to change it; on its own default it calls only 35 proteins. Every layer of this study reports Benjamini-Hochberg, which is why limma is used directly. DEP was removed from Bioconductor at release 3.23; install with remotes::install_github("arnesmits/DEP"). Two pitfalls are handled in the script: make_se and normalize_vsn both assume raw intensities and will silently compress fold changes on this already-log matrix.
+   > Requires CSF_Astral_CC_results.tsv from step 5; it must run AFTER 01cc, not before.
 
 5. `03_proteomics/01cc_csf_astral_completecase.R` (R) **[!]**  
    CANONICAL Astral CSF (Bader & Mann) MS-vs-control differential abundance, complete-case (no imputation). Matches annotation to .raw run columns, builds MS/Control groups from MSgroup + Diagnosis_group, gene-dedups by max variance,
    → CSF_Astral_CC_results.tsv, CSF_Astral_CC_volcano.png, CSF_Astral_CC_volcano.pdf
-   > 83 MB input matrix read with fread; a few minutes and several GB RAM. Must be run with cwd = Proteomics/r_notebooks (source("helpers.R") is relative). Verified output: 1,995 genes, 941 at FDR<0.05 - exactly the manuscript's Section 2.5 numbers. The volcano SUBTITLE still says 'vs
+   > 83 MB input matrix read with fread; a few minutes and several GB RAM. Must be run with cwd = Proteomics/r_notebooks (source("helpers.R") is relative). Verified output under the reported DEP+BH path: 2,046 genes, 955 at FDR<0.05 - the manuscript's Section 2.5 numbers. (The superseded complete-case-limma path gave 1,995 / 941.) The volcano SUBTITLE still says 'vs
 
 10. `03_proteomics/02cc_csf_timstof_completecase.R` (R) **[!]**  
    CANONICAL timsTOF CSF (same Bader & Mann study, second instrument) complete-case differential abundance. Identical method to 01cc; discovers the timsTOF run column in the annotation table by regex.
    → CSF_timsTOF_CC_results.tsv, CSF_timsTOF_CC_volcano.png, CSF_timsTOF_CC_volcano.pdf
-   > 213 MB input matrix (fread nThread=4); the heaviest script in the layer, high peak RAM. Verified output: 1,069 genes, 759 at FDR<0.05 - matches the manuscript. Same wrong 'vsn + MinProb' figure subtitle. dep_completecase_de is copy-pasted from 01cc rather than shared via helpers.
+   > 213 MB input matrix (fread nThread=4); the heaviest script in the layer, high peak RAM. Verified output under the reported DEP+BH path: 1,093 genes, 776 at FDR<0.05 - matches the manuscript. (The superseded complete-case-limma path gave 1,069 / 759.) Same wrong 'vsn + MinProb' figure subtitle. dep_completecase_de is copy-pasted from 01cc rather than shared via helpers.
 
 15. `03_proteomics/04cc_magliozzi_brain_completecase.R` (R) **[!]**  
    CANONICAL brain white-matter proteome (cited in the manuscript as Wang & Julien 2026 Nat Commun, DOI 10.1038/s41467-025-68118-0, but named 'Magliozzi' throughout the code) complete-case differential abundance across 4 region contr
