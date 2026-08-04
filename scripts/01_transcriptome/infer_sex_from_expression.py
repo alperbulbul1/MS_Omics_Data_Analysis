@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""SUPERSEDED by build_rna_sex_persample.py, which is what produced the reported numbers.
+This earlier implementation uses a 1.0-SD gap threshold and a single inference route; the
+shipped analysis uses 0.85 SD and three per-series routes. Retained for provenance only.
+Its output paths pointed at a session-scoped scratchpad directory and now point at
+Methylation_Data/, so it no longer fails silently on another machine.
+"""
 """Infer sample sex from expression of XIST and Y-linked genes, per bulk-RNA series.
 
 Sex is undeposited for 10 of the 14 bulk-transcriptomic series. It is however directly readable from
@@ -58,11 +64,9 @@ def infer(mat):
 def main():
     meta = pd.read_csv(f"{ROOT}/Expression_Data/Corrected_Metadata_ComBat.csv")
     known = pd.read_csv(
-        "/private/tmp/claude-501/-Users-alperbulbul-Desktop-MS-GEO/"
-        "e14c6758-36eb-4f9e-84e8-ec87d00c1dc0/scratchpad/rna_known_sex.csv"
+        "__MS_GEO_ROOT__/Methylation_Data/rna_known_sex.csv"
     ) if os.path.exists(
-        "/private/tmp/claude-501/-Users-alperbulbul-Desktop-MS-GEO/"
-        "e14c6758-36eb-4f9e-84e8-ec87d00c1dc0/scratchpad/rna_known_sex.csv"
+        "__MS_GEO_ROOT__/Methylation_Data/rna_known_sex.csv"
     ) else None
 
     rows = []
@@ -82,12 +86,11 @@ def main():
                          F=int((calls == "F").sum()), M=int((calls == "M").sum()),
                          gap_sd=round(gap, 2)))
         calls.rename("sex_inferred").to_frame().assign(series=ds).to_csv(
-            f"/private/tmp/claude-501/-Users-alperbulbul-Desktop-MS-GEO/"
+            f"__MS_GEO_ROOT__/Methylation_Data/"
             f"e14c6758-36eb-4f9e-84e8-ec87d00c1dc0/scratchpad/inferred_{ds}.csv")
     t = pd.DataFrame(rows)
     print(t.to_string(index=False))
-    t.to_csv("/private/tmp/claude-501/-Users-alperbulbul-Desktop-MS-GEO/"
-             "e14c6758-36eb-4f9e-84e8-ec87d00c1dc0/scratchpad/rna_sex_inferred_summary.csv",
+    t.to_csv("__MS_GEO_ROOT__/Methylation_Data/rna_sex_inferred_summary.csv",
              index=False)
 
 

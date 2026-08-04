@@ -67,12 +67,11 @@ PROTEOMICS = {
     "blood_ukb":   {"compartment": "Blood", "platform": "UK Biobank Olink",
                     "citation": "Jacobs 2024", "n_ms": 407, "n_hc": 39979},
     # Region-resolved brain white matter (CTX / NAWM / WML), n=8 per group.
-    # UNRESOLVED PROVENANCE: the data files are named ``Magliozzi2026_*``, the _INV
-    # figure labels this "Wang & Julien 2025", and README says "Wang & Julien 2026".
-    # The author/year is inconsistent across the repo — the authors must confirm which
-    # is correct. Left at the _INV value here pending that decision.
+    # PROVENANCE RESOLVED: this is Wang & Julien 2026 (ref9 in the manuscript; raw spectra
+    # MassIVE MSV000096790). The on-disk tables and the 04cc script are still named
+    # ``Magliozzi*`` for historical reasons; that is a filename, not an attribution.
     "brain":       {"compartment": "Brain WM", "platform": "region-resolved DIA",
-                    "citation": "Wang & Julien 2025", "n_per_group": 8},
+                    "citation": "Wang & Julien 2026", "n_per_group": 8},
 }
 
 
