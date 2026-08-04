@@ -37,8 +37,15 @@ METH_BETA_PATH = (
     else Path("")
 )
 
-EXPR_R = ROOT / "run_expression_subgroup_limma.R"
-METH_R = ROOT / "run_methylation_subgroup_limma.R"
+# The two R workers ship alongside this file in the release, not under the data root, so resolve
+# them from this script's own location. Reading them from ROOT pointed every subprocess call at a
+# path that does not exist once configure.sh has substituted the data directory.
+HERE = Path(__file__).resolve().parent
+EXPR_R = HERE / "run_expression_subgroup_limma.R"
+METH_R = HERE.parent / "02_methylation" / "run_methylation_subgroup_limma.R"
+for _w in (EXPR_R, METH_R):
+    if not _w.exists():
+        raise FileNotFoundError(f"R worker not found: {_w}")
 
 MIN_CASES = 4
 MIN_CONTROLS = 4

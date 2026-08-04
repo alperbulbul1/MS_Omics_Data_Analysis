@@ -17,7 +17,11 @@ warnings.filterwarnings("ignore")
 sc.settings.verbosity = 0
 sc.settings.set_figure_params(dpi=150, frameon=False, fontsize=9)
 
-ROOT = Path(__file__).resolve().parent.parent
+# In the authors' tree this file sat in SingleCell_CELLxGENE/scripts/, so parent.parent was the
+# single-cell data root. In the release it resolves to <repo>/scripts/, which would stream the
+# ~18 GB single-cell tree into the git checkout and put it where no downstream script looks.
+# Use the same placeholder the sibling pseudobulk scripts use.
+ROOT = Path("__MS_GEO_ROOT__") / "SingleCell_CELLxGENE"
 FIG  = ROOT / "results" / "figures" / "blood_Ramesh2020_UMAP"
 H5   = FIG / "adata_ramesh_umap.h5ad"
 

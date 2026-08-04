@@ -37,6 +37,9 @@ source("helpers.R")
 ## COMPLETE-CASE variant of dep_equivalent_de: filter + vsn, NO imputation.
 ## limma fits each protein on its observed values (MAR assumption); proteins needing
 ## >=2 observed values per group to be estimable.
+# Retained for reference, not called by this script: it is the limma-equivalent estimation route
+# that dep_bh_equivalence_check.R exercises to show the DEP path below reproduces the same
+# effect estimates. The reported numbers come from the DEP branch, not from here.
 dep_completecase_de <- function(mat, group_vec, group_a = "MS", group_b = "Control", thr = 0.5) {
   m <- filter_missval_R(mat, group_vec, thr = thr)
   m <- vsn_with_fallback(m)

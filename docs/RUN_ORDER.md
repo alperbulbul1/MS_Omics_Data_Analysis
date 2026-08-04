@@ -229,24 +229,41 @@ generators are named after the manuscript figure they produce.
    > STALE INPUT PATHS. It reads CSF_Astral_R_DEP_results.tsv / CSF_timsTOF_R_DEP_results.tsv, i.e. the pre-revision imputed DEP outputs. The proteomics layer moved to complete-case *_CC_*.tsv this round. This script has NOT been updated and would re-introduce the rejected MinProb-imp
 
 88. `02_methylation/promoter_vs_body_test.R` (R) **[!]**  
-   Reviewer point 2: explicit promoter-only vs gene-body-only signed-Stouffer statistic for all 82 pool genes in all 5 strata, classifying probes via UCSC_RefGene_Group. Bypasses mCSEA's minimum-region-size limitation.
+   Reviewer point 2: explicit promoter-only vs gene-body-only signed-Stouffer statistic for all pool genes in all 5 strata, classifying probes via UCSC_RefGene_Group. Bypasses mCSEA's minimum-region-size limitation.
    → promoter_vs_body_by_gene.csv
    > MUST be in the release: it is the sole source of the Section 2.4 facts that CD79B has only 3 promoter probes and that SH3BP4's gene-body FDR=0.016 beats its promoter FDR=0.13 in the DMF stratum. No copy exists under MS_GEO_pipeline/. Hardcoded RES and OUT paths.
 
-93. `02_methylation/update_S2_promoter_flag.py` (python) **[!]**  
+93. `02_methylation/update_S2_promoter_flag.py` (python) **[SUPERSEDED — do not run]**  
    Adds the methylation-compartment classification (promoter-confirmed / promoter-only / composite-only), mCSEA promoter and gene-body padj columns to Supplementary Table S2 and runs the promoter-only sensitivity count.
    → Supplementary_Tables_IJMS_v2.xlsx
-   > Produces the reported '6 of 82 promoter-anchored / 76 composite-only' numbers, so it is analysis code, not a manuscript-editing utility. Reads the v1 workbook and writes the v2 workbook.
+   > SUPERSEDED by step 104 (`rebuild_S2_94genes.py`). It patches columns onto the older 82-gene
+   > sheet and produces the withdrawn '6 of 82 promoter-anchored / 76 composite-only' figures.
+   > Running it regenerates the superseded v2 workbook; it is retained only for provenance.
 
 98. `02_methylation/15_genelevel_weighting_corrected.R` (R) **[!]**  
    CANONICAL gene-level weighting analysis. Recomputes, per stratum, the published unweighted-Stouffer Z, the consistent 1/SE-weighted effect size, the IVW secondary estimator, the per-gene probe range, and the dependence-aware Z wit
    → 15_genelevel_weighting_corrected.tsv
    > Memory-heavy: builds a dense n x n hat matrix and a full residual matrix per stratum, including the 548-sample combined matrix; MAXPR=40 caps probes per gene in the pairwise-correlation step, so rho_sum is extrapolated for genes with >40 probes. Hardcoded setwd() and RES. NOT in 
 
-103. `02_methylation/update_S2_weighting.py` (python) **[!]**  
+103. `02_methylation/update_S2_weighting.py` (python) **[SUPERSEDED — do not run]**  
    Writes the six weighting columns promised in Methods and in the Reviewer-1 reply into Supplementary Table S2: CpG probes (n), unweighted mean logFC, 1/SE-weighted, inverse-variance, probe range, gene-level FDR - all from the 05_co
    → Supplementary_Tables_IJMS_v2.xlsx (MODIFIED IN PLACE)
-   > NOT IDEMPOTENT. It appends columns at ws.max_column+1 and appends a sentence to the A1 caption on every invocation, so a second run duplicates six columns and duplicates the caption text. Must be run exactly once, on a clean copy of the workbook, and only after update_S2_promoter
+   > SUPERSEDED by step 104 (`rebuild_S2_94genes.py`), which builds the whole sheet in one pass.
+   > Retained for provenance only. It was also NOT IDEMPOTENT: it appended columns at
+   > ws.max_column+1 and appended a sentence to the A1 caption on every invocation, so a second
+   > run duplicated six columns and duplicated the caption text.
+
+104. `02_methylation/rebuild_S2_94genes.py` (python) **[!]**  
+   CANONICAL Supplementary Table S2 builder. Rebuilds the whole sheet in one pass for the current
+   94-gene inverse-concordant pool: per-gene statistics, the methylation-compartment flag
+   (promoter-confirmed / promoter-only / composite-only), the mCSEA promoter and gene-body padj
+   columns, the promoter-only survival flag, and the CpG-count and weighting columns from the
+   05_combined stratum.
+   → Supplementary_Tables_IJMS_v3.xlsx
+   > Run AFTER steps 06 (mCSEA) and 98 (`15_genelevel_weighting_corrected.R`), whose outputs it
+   > reads, and instead of steps 93 and 103. Idempotent: it deletes and recreates the sheet rather
+   > than appending, and asserts the pool is exactly 94 genes. Reports the promoter-only
+   > sensitivity analysis to stdout: 8 of 94 survive, including both Tier-1 genes.
 
 108. `02_methylation/run_all_methylation_combat.R` (R) **[!]**  
    TRACK B canonical builder. Merges the 6-series IDAT M-matrix with the two beta-only series on common 450K probes, runs sva::ComBat with condition preserved, and runs limma MS-vs-HC with best-probe-per-gene aggregation.

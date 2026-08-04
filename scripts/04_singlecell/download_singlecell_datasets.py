@@ -26,7 +26,11 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
-ROOT = Path(__file__).resolve().parent.parent
+# In the authors' tree this file sat in SingleCell_CELLxGENE/scripts/, so parent.parent was the
+# single-cell data root. In the release it resolves to <repo>/scripts/, which would stream the
+# ~18 GB single-cell tree into the git checkout and put it where no downstream script looks.
+# Use the same placeholder the sibling pseudobulk scripts use.
+ROOT = Path("__MS_GEO_ROOT__") / "SingleCell_CELLxGENE"
 DATA = ROOT / "data"
 META = ROOT / "metadata"
 LOGS = ROOT / "logs"

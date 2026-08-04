@@ -122,7 +122,8 @@ scrna_rows.append({
 # ════════════════════════════════════════════════════════════════════════════════
 prot_rows = [
     {"Layer": "Proteomics (CSF Astral)",
-     "Accession": "PXD046288",  # Bader/Mann CSF Astral
+     "Accession": "PXD064570",  # Bader/Mann CSF Orbitrap Astral (PXD045058 is the same
+                                # study's timsTOF CSF set, PXD064513 its Stellar set)
      "Cohort_label": "Bader, Mann 2024",
      "Tissue": "CSF",
      "Platform": "Orbitrap Astral DIA",
@@ -130,8 +131,9 @@ prot_rows = [
      "n_total": 1284,
      "PMID": "38684892",
      "Stratum_used": "DEP::filter_proteins ≥50% + raw Mann-Whitney rescue"},
-    {"Layer": "Proteomics (brain timsTOF)",
-     "Accession": "PXD060064",
+    {"Layer": "Proteomics (brain WM)",
+     # Wang & Julien is deposited on MassIVE, not PRIDE; PXD060064 was a transcription error.
+     "Accession": "MSV000096790",
      "Cohort_label": "Wang, Julien 2025",
      "Tissue": "Brain (cortex, NAWM, lesion, lesion-edge)",
      "Platform": "Bruker timsTOF dia-PASEF",

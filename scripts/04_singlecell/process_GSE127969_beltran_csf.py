@@ -40,7 +40,11 @@ warnings.filterwarnings("ignore")
 sc.settings.verbosity = 0
 sc.settings.set_figure_params(dpi=150, frameon=False, fontsize=9)
 
-ROOT = Path(__file__).resolve().parent.parent
+# In the authors' tree this file sat in SingleCell_CELLxGENE/scripts/, so parent.parent was the
+# single-cell data root. In the release it resolves to <repo>/scripts/, which would stream the
+# ~18 GB single-cell tree into the git checkout and put it where no downstream script looks.
+# Use the same placeholder the sibling pseudobulk scripts use.
+ROOT = Path("__MS_GEO_ROOT__") / "SingleCell_CELLxGENE"
 DATA = ROOT / "data" / "blood_Beltran2019_GSE127969"
 FIG  = ROOT / "results" / "figures" / "blood_Beltran2019"
 FIG.mkdir(parents=True, exist_ok=True)

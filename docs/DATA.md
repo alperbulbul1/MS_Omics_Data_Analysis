@@ -31,8 +31,9 @@ corresponding layer. Sample counts are the post-QC numbers used in the paper.
 | Single-cell RNA-seq | GSE118257 | Jäkel et al. 2019 | Brain / WM (snRNA-seq) | 10x Chromium | — | — |
 | Single-cell RNA-seq | GSE144744 | Kaufmann et al. 2021 | PBMC | 10x Chromium 3′ (scRNA-seq + CITE-seq) | — | — |
 | Single-cell RNA-seq | GSE127969 | Beltrán et al. 2019 | CSF + PBMC (twin pairs) | 10x Chromium (5′) | 5 | 5 |
-| Proteomics (CSF Astral) | PXD045058+PXD064513+PXD064570 | Bader, Mann 2026 | CSF | Orbitrap Astral DIA | 978 | 306 |
-| Proteomics (brain timsTOF) | PXD060064 | Wang, Julien 2026 | Brain (cortex, NAWM, lesion, lesion-edge) | Bruker timsTOF dia-PASEF | 20-32 | 12-20 |
+| Proteomics (CSF Astral) | PXD064570 | Bader, Mann 2026 | CSF | Orbitrap Astral DIA | 978 | 306 |
+| Proteomics (CSF timsTOF) | PXD045058 | Bader, Mann 2026 | CSF | Bruker timsTOF dia-PASEF | 1536 | 2363 |
+| Proteomics (brain WM) | MSV000096790 (MassIVE) | Wang, Julien 2026 | Brain (cortex, NAWM, lesion, lesion-edge) | Bruker timsTOF dia-PASEF | 20-32 | 12-20 |
 | Proteomics (UKB plasma) | UK Biobank-PPP (Olink Explore) | Jacobs et al. 2024 | Plasma | Olink Explore (antibody) | 407 | 39979 |
 
 ## Repositories

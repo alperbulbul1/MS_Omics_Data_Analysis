@@ -2,7 +2,18 @@
 # For each, what actually executed when the reported results were produced.
 
 DEP (R/Bioconductor)
-    -> NOT INSTALLED. Referenced in Proteomics/r_notebooks/01_,02_,01cc_,02cc_ and Proteomics/r_scripts/01_,03_. In the legacy 01_/02_ scripts the guard is `have_DEP <- requireNamespace("DEP", quietly=TRUE)` -> FALSE. In the CANONICAL complete-case scripts 01cc_csf_astral_completecase.R:50 and 02cc_csf_timstof_completecase.R:39 it is hard-coded `have_DEP <- FALSE  # COMPLETE-CASE: force the limma path`, so the `library(DEP)` branch is unreachable dead code. What actually produced every reported proteomics number: Proteomics/r_notebooks/helpers.R -> filter_missval_R (>=50% valid per condition, mirrors DEP::filter_proteins) + vsn_with_fallback (vsn::justvsn 3.80.0, median-centre if the matrix is already log-scale) + moderated_t_safe (limma 3.68.3 lmFit/eBayes), plus a >=2-observed-values-per-group estimability filter, NO imputation. DEP must NOT be listed as a runtime dependency of the release.
+    -> REQUIRED, and installed. This entry previously said the opposite; it described the code as it
+    stood before the revision and is corrected here. The canonical complete-case scripts
+    01cc_csf_astral_completecase.R:61 and 02cc_csf_timstof_completecase.R:50 now read
+    `have_DEP <- requireNamespace("DEP", quietly = TRUE)` and `stop()` when DEP is absent, so the DEP
+    branch is the path that executes, not dead code. Every reported CSF proteomic number comes from
+    DEP::test_diff run WITHOUT imputation (DEP::impute is never called; test_diff accepts the missing
+    values directly), with DEP's hard-coded fdrtool q-values replaced by Benjamini-Hochberg, because
+    every other layer of the study reports BH-FDR. On the Astral cohort fdrtool calls 35 proteins
+    against 955 under BH. DEP was removed from Bioconductor at release 3.23, so install from source:
+        remotes::install_github("arnesmits/DEP")     # version 1.7.1
+    dep_bh_equivalence_check.R documents the limma path that reproduces the same effect estimates
+    (Pearson r = 1.000) and is what to run if DEP cannot be installed.
 
 wateRmelon (R/Bioconductor)
     -> NOT INSTALLED. normalize_beta_only.R:83 `has_bmiq <- requireNamespace("wateRmelon", quietly=TRUE)` -> FALSE, printing 'wateRmelon not found - using quantile normalization fallback'. BMIQ Type-I/Type-II probe-bias correction therefore NEVER ran; the deposited normalised betas are quantile-normalised via preprocessCore 1.74.0. This is what the manuscript's methylation numbers rest on.

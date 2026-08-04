@@ -31,15 +31,23 @@ MAG = ["MS_CTX_vs_ODC_CTX", "MS_NAWM_vs_ODC_WM", "MS_WML_vs_ODC_WM", "MS_WML_vs_
 
 for dst, (src, fccol) in CSF.items():
     d = pd.read_csv(META / src, sep="\t")
+    # The CSF cohorts go through DEP::test_diff, which emits no moderated-t column, while the
+    # brain cohort still comes from the limma path and does. Carry the statistic when the source
+    # has it and omit it otherwise: requiring it unconditionally made the whole chain
+    # 01cc/02cc -> adapter -> figures 4 and 6 fail with a KeyError.
     out = pd.DataFrame({"Genes": d["gene"], fccol: d["logFC"],
-                        "t": d["t"], "pval": d["P.Value"], "FDR": d["adj.P.Val"]})
+                        "pval": d["P.Value"], "FDR": d["adj.P.Val"]})
+    if "t" in d.columns:
+        out.insert(2, "t", d["t"])
     out.to_csv(OUT / dst, sep="\t", index=False)
     print(f"{dst:22s} {len(out):5d} genes  FDR<0.05={int((out.FDR<0.05).sum())}")
 
 for cn in MAG:
     d = pd.read_csv(META / f"Magliozzi_CC_{cn}.tsv", sep="\t")
     out = pd.DataFrame({"Gene": d["gene"], "log2FC": d["logFC"],
-                        "t": d["t"], "p": d["P.Value"], "FDR": d["adj.P.Val"]})
+                        "p": d["P.Value"], "FDR": d["adj.P.Val"]})
+    if "t" in d.columns:
+        out.insert(2, "t", d["t"])
     out.to_csv(OUT / f"Magliozzi2026_{cn}.tsv", sep="\t", index=False)
     print(f"{cn:22s} {len(out):5d} genes  nominal p<0.05={int((out.p<0.05).sum())}")
 
