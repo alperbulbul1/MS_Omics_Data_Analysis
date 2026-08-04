@@ -117,6 +117,25 @@ for (l in labs) {
   cat(line, "\n")
 }
 
+# The manuscript states that within each stratum MS and control detection rates are
+# indistinguishable. Test it rather than leaving the reader to eyeball the percentages: a Fisher
+# exact test per stratum, skipping any arm with fewer than 8 samples (the >10 control arm has 5).
+cat("\n  per-stratum MS vs Control detection (Fisher exact):\n")
+pmin <- NA
+for (l in labs) {
+  sm <- !is.na(strat) & strat == l & grp == "MS"
+  sc <- !is.na(strat) & strat == l & grp == "Control"
+  if (sum(sm) < 8 || sum(sc) < 8) {
+    cat(sprintf("    %-8s not testable (MS n=%d, Control n=%d)\n", l, sum(sm), sum(sc))); next
+  }
+  tab <- matrix(c(sum(det[sm]), sum(!det[sm]), sum(det[sc]), sum(!det[sc])), nrow = 2)
+  p <- fisher.test(tab)$p.value
+  pmin <- min(pmin, p, na.rm = TRUE)
+  cat(sprintf("    %-8s p = %.3f\n", l, p))
+}
+cat(sprintf("    smallest p across testable strata = %.3f%s\n", pmin,
+            if (!is.na(pmin) && pmin > 0.05) "  (no stratum differs)" else ""))
+
 ## ---- 4. specificity controls -----------------------------------------------------------
 cat("\n== 4. specificity: same model for other proteins ==\n")
 for (gene in c("PTPRC", "ALB", "CHL1", "CTSZ", "ICAM1")) {

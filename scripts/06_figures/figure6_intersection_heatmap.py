@@ -3,7 +3,7 @@
 intersection matrix with Inverse-concordant Tier-1 highlighting.
 
 Same data as v5_poster but with:
-  • Rows fixed in three tier-blocks (Inverse-concordant Tier-1 / Tier-2 auxiliary inverse-concordant / extended inverse-concordant)
+  • Rows fixed in four evidence blocks (Tier-1 / suggestive / Tier-2 auxiliary / proteomic anchor)
   • Horizontal separator lines between tiers
   • Gene-label coloring per tier (red bold / orange / grey)
   • Tier badge text on left edge
@@ -16,6 +16,8 @@ Columns (unchanged): 4 layer groups × 22 cohort-strata readouts
 """
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
@@ -23,12 +25,21 @@ from pathlib import Path
 PROJ = Path("__MS_GEO_ROOT__")
 OUT  = PROJ / "Poster_v2" / "figures" / "intersection_heatmap_v_INV.png"
 
-# Tier definitions (4 tiers — now includes Tier-2 non-concordant proteomic anchors)
+# Evidence groups.  HLA-E is a Tier-2 auxiliary gene: it satisfies both discovery arms
+# (RNA FDR 0.031 in whole blood, methylation FDR 8.1e-8) but carries no proteomic or
+# donor-level single-cell anchor, which is exactly the Tier-2 auxiliary definition.  It was
+# previously displayed as a separate 'suggestive' category, which contradicted that rule.
 INV_TIER1 = ["ITGB2","IKZF1"]
-TIER2_AUX_INV = ["CD79B","LXN","SH3BP4","CASP6","CASP8","DGKQ","MX1","IFIT1","NUP210","RUNX3"]
-TIER2_PROT_ANCHOR = ["CTSZ","CHL1","ICAM1","FOXP3","ITGAL"]  # NEW BLOCK
+SUGGESTIVE = []
+TIER2_AUX_INV = ["CD79B","LXN","HLA-E","SH3BP4","CASP6","CASP8","DGKQ","MX1","IFIT1","NUP210","RUNX3"]
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+TIER2_PROT_ANCHOR = ["CTSZ","CHL1","ICAM1","ITGAL"]
 
-RED_HOT="#B71C1C"; ORANGE="#E65100"; PURPLE="#6A1B9A"; GREY_DARK="#424242"
+RED_HOT="#B71C1C"; SUG_TEAL="#00796B"; ORANGE="#E65100"; PURPLE="#6A1B9A"; GREY_DARK="#424242"
 
 COLUMNS = [
     ("RNA",         "PBMC",                       "RNA-PBMC"),
@@ -43,6 +54,14 @@ COLUMNS = [
     ("Methylation", "Meth WB Ocrelizumab",        "Meth-WB Ocre"),
     ("Methylation", "Meth Brain WM",              "Meth-Brain WM"),
     ("Methylation", "Meth combined cohort",       "Meth-Combined"),
+    # Region-level mCSEA promoter test. Added because it is the ONLY assay in which CASP8 reaches
+    # methylation significance (FDR 0.019); without this column CASP8's methylation block was blank,
+    # contradicting both Figure 3 panel F and the Results text, which names CASP8 among the six
+    # mCSEA-promoter-retained genes. NOTE: this statistic is a directional region-level enrichment
+    # score (range about +/-2.3), not a per-CpG beta log fold-change (range about +/-0.6), so under
+    # the shared +/-1 clip its colour saturates and is NOT magnitude-comparable with the columns to
+    # its left; read its sign and its asterisks only. Stated in the figure caption.
+    ("Methylation", "mCSEA promoter (combined)",  "Meth-mCSEA prom"),
     ("Proteomics",  "raw:astral",                 "Prot-CSF Astral"),
     ("Proteomics",  "raw:timstof",                "Prot-CSF timsTOF"),
     ("Proteomics",  "mag:CTX",                    "Prot-Brain CTX"),
@@ -54,7 +73,7 @@ COLUMNS = [
     ("scRNA",       "blood",                      "scRNA-Blood"),
     ("scRNA",       "csf",                        "scRNA-CSF"),   # data uses lowercase 'csf'
 ]
-LAYER_BOUNDARIES = [7, 12, 19]  # RNA 0-6 | Meth 7-11 | Prot 12-18 | scRNA 19-21
+LAYER_BOUNDARIES = [7, 13, 20]  # RNA 0-6 | Meth 7-12 | Prot 13-19 | scRNA 20-22
 
 # ── Load data ──────────────────────────────────────────────────────────────
 ua = pd.read_csv(PROJ/"Methylation/results/Unified_All_Assays_Long.tsv", sep="\t")
@@ -90,13 +109,10 @@ PROT_RAW = {"raw:astral":astral_idx, "raw:timstof":timstof_idx, "raw:ukb":ukb_id
             "mag:CTX":mag_idx["CTX"], "mag:NAWM":mag_idx["NAWM"],
             "mag:WMLWM":mag_idx["WMLWM"], "mag:WMLNAWM":mag_idx["WMLNAWM"]}
 
-# Gene ordering: Inverse-concordant Tier-1 → Tier-2 auxiliary inverse-concordant → Tier-2 non-concordant proteomic anchors.
-# The generic "Extended inverse-concordant genes" block (top combined-evidence inverse-concordant genes NOT
-# individually named/discussed in the manuscript body) is REMOVED — every row
-# shown is a named, text-described candidate.
-extended = []
-genes = INV_TIER1 + TIER2_AUX_INV + TIER2_PROT_ANCHOR
-print(f"Selected {len(genes)} named candidates (extended inverse-concordant filler removed)")
+# Every displayed row is explicitly discussed in the manuscript.  The strict tiered
+# panel contains 17 tiered genes; there is no separate suggestive row.
+genes = INV_TIER1 + SUGGESTIVE + TIER2_AUX_INV + TIER2_PROT_ANCHOR
+print(f"Selected {len(genes)} displayed candidates (all tiered)")
 
 # ── Build matrices ─────────────────────────────────────────────────────────
 val_mat = np.full((len(genes), len(COLUMNS)), np.nan)
@@ -179,24 +195,31 @@ for sep in LAYER_BOUNDARIES:
 
 # Horizontal tier separators
 n_inv = sum(1 for g in genes if g in INV_TIER1)
+n_sug = sum(1 for g in genes if g in SUGGESTIVE)
 n_aux = sum(1 for g in genes if g in TIER2_AUX_INV)
 n_prot = sum(1 for g in genes if g in TIER2_PROT_ANCHOR)
-n_ext = len(genes) - n_inv - n_aux - n_prot
 
 if n_inv > 0:
     ax.axhline(n_inv - 0.5, color="#000", linewidth=3.0, alpha=0.9)
+if n_sug > 0:
+    ax.axhline(n_inv + n_sug - 0.5, color="#000", linewidth=1.4,
+                linestyle=":", alpha=0.8)
 if n_aux > 0:
-    ax.axhline(n_inv + n_aux - 0.5, color="#000", linewidth=2.0,
+    ax.axhline(n_inv + n_sug + n_aux - 0.5, color="#000", linewidth=2.0,
                 linestyle="--", alpha=0.8)
 
-# Tier badges on the far left (outside axes) — 3 named tiers only
+# Evidence-group badges on the far left.
 ax.text(-2.7, (n_inv - 1) / 2, f"Inverse-concordant Tier-1\n({n_inv} genes)",
          ha='right', va='center', fontsize=18.4, fontweight='bold',
          color=RED_HOT, transform=ax.transData)
-ax.text(-2.7, n_inv + n_aux/2 - 0.5, f"Tier-2\nauxiliary inverse-concordant\n({n_aux} genes)",
+if n_sug > 0:
+    ax.text(-2.7, n_inv + (n_sug-1)/2, "Suggestive\n(non-tier-1)",
+             ha='right', va='center', fontsize=16.8, fontweight='bold',
+             color=SUG_TEAL, transform=ax.transData)
+ax.text(-2.7, n_inv + n_sug + n_aux/2 - 0.5, f"Tier-2\nauxiliary inverse-concordant\n({n_aux} genes)",
          ha='right', va='center', fontsize=16.8, fontweight='semibold',
          color=ORANGE, transform=ax.transData)
-ax.text(-2.7, n_inv + n_aux + n_prot/2 - 0.5,
+ax.text(-2.7, n_inv + n_sug + n_aux + n_prot/2 - 0.5,
          f"Tier-2\nnon-concordant\nproteomic\nanchors\n({n_prot} genes)",
          ha='right', va='center', fontsize=16.0,
          fontweight='semibold', color=PURPLE, transform=ax.transData)
@@ -212,6 +235,8 @@ ax.set_yticklabels(genes, fontsize=17.6, fontweight='bold', fontstyle='italic')
 for ytl, g in zip(ax.get_yticklabels(), genes):
     if g in INV_TIER1:
         ytl.set_color(RED_HOT); ytl.set_fontweight('bold')
+    elif g in SUGGESTIVE:
+        ytl.set_color(SUG_TEAL); ytl.set_fontweight('bold')
     elif g in TIER2_AUX_INV:
         ytl.set_color(ORANGE); ytl.set_fontweight('semibold')
     elif g in TIER2_PROT_ANCHOR:
@@ -254,5 +279,6 @@ print(f"  → {img.size[0]} × {img.size[1]} ({img.size[0]/img.size[1]:.2f}:1)")
 
 print("\nGenes per tier:")
 print(f"  Inverse-concordant Tier-1 ({n_inv}): {[g for g in genes if g in INV_TIER1]}")
+print(f"  Suggestive non-tier-1 ({n_sug}): {[g for g in genes if g in SUGGESTIVE]}")
 print(f"  Tier-2 auxiliary inverse-concordant ({n_aux}): {[g for g in genes if g in TIER2_AUX_INV]}")
 print(f"  Tier-2 non-concordant prot anchors ({n_prot}): {[g for g in genes if g in TIER2_PROT_ANCHOR]}")

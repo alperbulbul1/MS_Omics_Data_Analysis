@@ -4,8 +4,8 @@ Code for *"Inverse-concordant DNA-methylation × transcription integration acros
 prioritises ITGB2 and IKZF1 in multiple sclerosis"* (IJMS, under revision).
 
 This repository holds the **analysis pipeline only**. Manuscript-authoring utilities (LaTeX/DOCX
-patching, citation renumbering, figure relabelling) are deliberately excluded; 89 of the project's
-529 R/Python files are published here.
+patching, citation renumbering, figure relabelling) are deliberately excluded; 95 of the project's
+651 R/Python files are published here.
 
 ---
 
@@ -100,9 +100,14 @@ Stated plainly, because they are real and a reader will otherwise find them:
      `08_CellLevel_vs_Donor`. `04_singlecell/run_pseudobulk_reanalysis.py` produces its 192-row
      parent table and is shipped, but the filter-and-rename step that reduces it to the 27 rows
      used was never saved.
-   - `Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv` — panel G of Figure 2. Note this is a
-     different table from `07_pan_tissue_DE.tsv`, which `01_transcriptome/07_total_combined_de.R`
-     does produce (10,744 vs 7,116 genes; 6,597 shared).
+   - ~~`Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv`~~ — **RESOLVED.** Nothing reads this
+     orphan any more. Figure 2 panel G now reads `Transcriptome/results/07_pan_tissue_DE.tsv`,
+     the output of `01_transcriptome/07_total_combined_de.R` and the same table consumed by the
+     inverse-concordance scan, the four-layer master and Figure 6. The two disagreed on two
+     genes: under the orphan *IKZF1* was pan-tissue-significant (FDR 0.036) and *HLA-E* was not
+     (0.295); under the canonical table *IKZF1* is not (0.573) and *HLA-E* is (0.012). The
+     manuscript was corrected to the canonical values, so every panel of Figure 2 is now
+     regenerable from this deposit.
    - `Expression_Data/Corrected_Metadata_ComBat.csv` — see limitation 1 above.
 
 ## 7. Citation

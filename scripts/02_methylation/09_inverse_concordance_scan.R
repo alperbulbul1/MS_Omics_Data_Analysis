@@ -47,7 +47,13 @@ tx_files <- c("PBMC"       = "01_pbmc_DE.tsv",
               "B cells"    = "03_bcells_DE.tsv",
               "Brain WM"   = "04_brainwm_DE.tsv",
               "Whole blood"= "05_whole_blood_DE.tsv",
-              "IFN-b PBMC" = "06_pbmc_ifnb_DE.tsv",
+              ## IFN-b PBMC is deliberately excluded. 06_pbmc_ifnb_DE.tsv is an
+              ## IFN-beta-versus-baseline treatment-response contrast, not MS versus
+              ## control, so admitting it to the discovery scan would let a drug effect
+              ## define a disease candidate. Seven genes entered the pool through that
+              ## pairing alone (ATP6V0E2, EPHX1, HDAC4, MCF2L2, MFAP5, SARM1, ZFP36L1);
+              ## none of the tiered candidates did. The stratum is still reported as
+              ## treatment context in Figure 2C and in the per-assay tables.
               "Pan-tissue" = "07_pan_tissue_DE.tsv")
 tx_list <- lapply(tx_files, function(f) fread(file.path(TX_DIR, f)))
 cat(sprintf("Loaded %d TX strata, %d meth sources\n",

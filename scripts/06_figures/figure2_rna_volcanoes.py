@@ -2,12 +2,11 @@
 """figure2_rna_volcanoes.py — per-stratum RNA volcanoes with INV-only Tier-1 highlighting.
 
 Updates the prior per_celltype_volcanoes_v3.png by:
-  • Re-coloring labels into three tiers (Inverse-concordant Tier-1 / auxiliary inverse-concordant / non-concordant Tier-2)
-  • Inverse-concordant Tier-1 (5 genes) get RED bold * + thick ring
-  • Tier-2 auxiliary inverse-concordant (7 genes) get ORANGE ring
-  • Tier-2 other (CTSZ, CHL1, ITGAL, IFI44L, ICAM1, FOXP3, TYK2, STAT3,
-    MOSPD3, RPAP2, THRB) get GREY thin ring
-  • Force-label all 5 Inverse-concordant Tier-1 in every volcano where they have signal
+  • Re-colouring labels into the current evidence groups
+  • Inverse-concordant Tier-1 (2 genes: ITGB2, IKZF1) get RED bold * + thick ring
+  • Tier-2 auxiliary inverse-concordant (11 genes, including CD79B and HLA-E) get ORANGE ring
+  • Tier-2 non-concordant proteomic anchors are PURPLE
+  • Force-label both inverse-concordant Tier-1 genes in every volcano where they have signal
   • Stratum panels: PBMC, T cells, IFN-β PBMC, B cells, Whole blood, Brain WM
 
 Output: figures/per_celltype_volcanoes_INV.png
@@ -24,9 +23,12 @@ plt.rcParams.update({
     "font.family": "DejaVu Sans",
     "axes.titleweight": "bold",
     "axes.titlesize": 10.5,
-    "axes.labelsize": 8.5,
-    "xtick.labelsize": 7.5,
-    "ytick.labelsize": 7.5,
+    # Axis labels and ticks were 8.5/7.5, far too small next to the 28.8 pt panel letters and the
+    # 11-14 pt gene labels, and illegible once the figure is scaled to column width. Raised to the
+    # same scale Figure 3 uses for its axis labels so the two figures match.
+    "axes.labelsize": 15.2,
+    "xtick.labelsize": 13.0,
+    "ytick.labelsize": 13.0,
     "axes.spines.top": False, "axes.spines.right": False,
 })
 
@@ -45,28 +47,37 @@ SUBDIR2LABEL = {
 }
 SUMMARY_BY_DIR = SUMMARY.set_index("subgroup")
 
-NAVY="#0D3B66"; TEAL="#3E92CC"; RED_HOT="#B71C1C"; ORANGE="#E65100"
+NAVY="#0D3B66"; TEAL="#3E92CC"; RED_HOT="#B71C1C"; SUG_TEAL="#00796B"; ORANGE="#E65100"; PURPLE="#6A1B9A"
 GREY_DARK="#424242"; MUTE="#9E9E9E"
 
 # Gene tier definitions
 INV_TIER1 = {"ITGB2","IKZF1"}
-TIER2_AUX_INV = {"CD79B","CASP6","CASP8","DGKQ","MX1","IFIT1","NUP210","RUNX3","SH3BP4","LXN"}
-TIER2_OTHER = {"CTSZ","CHL1","ITGAL","IFI44L","ICAM1","FOXP3","TYK2","STAT3",
-                "MOSPD3","RPAP2","THRB","SLAMF1","SLC2A3","KLF6","HIGD1A"}
-ALL_TRACKED = INV_TIER1 | TIER2_AUX_INV | TIER2_OTHER
+SUGGESTIVE = set()
+TIER2_AUX_INV = {"CD79B","CASP6","CASP8","DGKQ","MX1","IFIT1","NUP210","RUNX3","SH3BP4","LXN","HLA-E"}
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+TIER2_PROT = {"CTSZ","CHL1","ICAM1","ITGAL"}
+ALL_TRACKED = INV_TIER1 | SUGGESTIVE | TIER2_AUX_INV | TIER2_PROT
 
 def gene_style(g):
     if g in INV_TIER1:
         return dict(facecolor="#ffcdd2", edgecolor=RED_HOT, lw=2.6,
                      star="* ", fontsize=13.8, fontweight="bold",
                      marker_size=160, color=RED_HOT)
+    if g in SUGGESTIVE:
+        return dict(facecolor="#e0f2f1", edgecolor=SUG_TEAL, lw=2.0,
+                     star="", fontsize=12.6, fontweight="bold",
+                     marker_size=120, color=SUG_TEAL)
     if g in TIER2_AUX_INV:
         return dict(facecolor="#fff3e0", edgecolor=ORANGE, lw=1.6,
                      star="◆ ", fontsize=12.0, fontweight="bold",
                      marker_size=95, color=ORANGE)
-    return dict(facecolor="#eeeeee", edgecolor=GREY_DARK, lw=1.0,
-                 star="", fontsize=10.9, fontweight="normal",
-                 marker_size=70, color=GREY_DARK)
+    return dict(facecolor="#f3e5f5", edgecolor=PURPLE, lw=1.2,
+                 star="", fontsize=11.2, fontweight="semibold",
+                 marker_size=78, color=PURPLE)
 
 FIGSIZE = (18.485, 12.7)  # 3 rows: A–F per-stratum + G combined pan-tissue
 
@@ -97,14 +108,17 @@ def volcano(ax, df, title, sample_n, fdr_thr=0.05,
     ax.scatter(df.loc[dn, "logFC"], df.loc[dn, "logp"], s=7,
                 c=color_dn, alpha=0.85, rasterized=True, linewidths=0)
 
-    # HONEST labelling — only label genes that ACTUALLY pass FDR<0.05 in this stratum.
-    # Reduced label budget to avoid overlap; adjustText resolves remaining collisions.
+    # Label every tracked gene that passes FDR<0.05 in this stratum. Earlier versions capped the
+    # Tier-2 lists at the four/three most significant, which silently dropped genes that were
+    # significant here - LXN and RUNX3 disappeared from panel G that way. adjustText resolves
+    # the resulting collisions.
     df_sig_only = df[df["adj.P.Val"] < fdr_thr]
     inv_rows = df_sig_only[df_sig_only.Gene.isin(INV_TIER1)].sort_values("adj.P.Val")
-    aux_rows = df_sig_only[df_sig_only.Gene.isin(TIER2_AUX_INV)].sort_values("adj.P.Val").head(4)
-    oth_rows = df_sig_only[df_sig_only.Gene.isin(TIER2_OTHER)].sort_values("adj.P.Val").head(3)
-    cands = pd.concat([inv_rows, aux_rows, oth_rows]).drop_duplicates(subset=["Gene"]).sort_values("adj.P.Val")
-    cands = cands.head(11)
+    sug_rows = df_sig_only[df_sig_only.Gene.isin(SUGGESTIVE)].sort_values("adj.P.Val")
+    aux_rows = df_sig_only[df_sig_only.Gene.isin(TIER2_AUX_INV)].sort_values("adj.P.Val")
+    prot_rows = df_sig_only[df_sig_only.Gene.isin(TIER2_PROT)].sort_values("adj.P.Val")
+    cands = pd.concat([inv_rows, sug_rows, aux_rows, prot_rows]).drop_duplicates(subset=["Gene"]).sort_values("adj.P.Val")
+    # no overall cap: every significant tracked gene is shown
 
     # Draw rings + create text objects (adjustText will reposition them)
     texts = []
@@ -155,9 +169,16 @@ for _k,(pos,(subdir,title)) in enumerate(zip(positions, panels)):
     df = load_dge(subdir)
     volcano(ax, df, chr(65+_k), ns(subdir))
 
-# Panel G — combined pan-tissue DEG (14 datasets, 514 samples, tissue-adjusted)
+# Panel G — combined pan-tissue DEG (13 datasets, 462 samples, tissue-adjusted).
+# Source is 07_pan_tissue_DE.tsv, the output of 01_transcriptome/07_total_combined_de.R. This panel
+# previously read Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv, an artefact with no producer
+# script that disagreed with the pipeline: under it IKZF1 was pan-tissue-significant (FDR 0.036) and
+# HLA-E was not (0.295), whereas the inverse-concordance scan, the four-layer master, the unified
+# assay table and Figure 6 all read 07_pan_tissue_DE.tsv, where IKZF1 is not significant (0.573) and
+# HLA-E is (0.012). The pairing counts reported in the manuscript derive from 07, so 07 is canonical.
 axG = fig.add_subplot(gs[2,1])
-comb = pd.read_csv("__MS_GEO_ROOT__/Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv")
+comb = pd.read_csv("__MS_GEO_ROOT__/Transcriptome/results/07_pan_tissue_DE.tsv", sep="\t")
+comb = comb.rename(columns={"gene": "Gene"})
 comb["adj.P.Val"] = pd.to_numeric(comb["adj.P.Val"], errors="coerce")
 comb["logFC"]     = pd.to_numeric(comb["logFC"], errors="coerce")
 comb = comb.dropna(subset=["logFC","adj.P.Val"])
@@ -172,11 +193,11 @@ legend_elements = [
            label=f"Inverse-concordant Tier-1 ({len(INV_TIER1)} genes)"),
     Patch(facecolor="#fff3e0", edgecolor=ORANGE, linewidth=1.4,
            label=f"Tier-2 auxiliary inverse-concordant ({len(TIER2_AUX_INV)} genes)"),
-    Patch(facecolor="#eeeeee", edgecolor=GREY_DARK, linewidth=0.8,
-           label="Tier-2 non-concordant proteomic anchors"),
+    Patch(facecolor="#f3e5f5", edgecolor=PURPLE, linewidth=1.0,
+           label=f"Tier-2 non-concordant proteomic anchors ({len(TIER2_PROT)} genes)"),
 ]
 fig.legend(handles=legend_elements, loc="center", ncol=1,
-            bbox_to_anchor=(0.205, 0.135), frameon=True, fontsize=13.6)
+            bbox_to_anchor=(0.170, 0.135), frameon=True, fontsize=13.6)
 plt.subplots_adjust(left=0.05, right=0.97, top=0.96, bottom=0.05)
 plt.savefig(OUT, dpi=300, bbox_inches="tight", facecolor="white")
 print(f"✓ saved → {OUT}")

@@ -12,11 +12,23 @@ F="__MS_GEO_ROOT__/Poster_v2/figures"
 OUT="__MS_GEO_ROOT__/Poster_v2/Pseudobulk_DonorLevel_Results.xlsx"
 BH=lambda p: multipletests(p,method='fdr_bh')[1]
 
-T1=['ITGB2','LXN','CD79B','IKZF1','SH3BP4']; SUG=['HLA-E']
-AUX=['CASP6','CASP8','DGKQ','MX1','IFIT1','NUP210','RUNX3']
-EXTRA=['CTSZ','CHL1','THRB','ITGAL','IFI44L','RPAP2','SLAMF1','PCNP','STAT3','TYK2','ICAM1','MOSPD3','FOXP3']
-PANEL=T1+SUG+AUX+EXTRA
-def tier(g): return 'Tier-1' if g in T1 else ('suggestive' if g in SUG else ('Tier-2 aux' if g in AUX else 'other panel'))
+T1=['ITGB2','IKZF1']
+SUG=['HLA-E']
+AUX=['CD79B','LXN','SH3BP4','CASP6','CASP8','DGKQ','MX1','IFIT1','NUP210','RUNX3']
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+PROT=['CTSZ','CHL1','ICAM1','ITGAL']
+CONTEXT=['THRB','IFI44L','RPAP2','SLAMF1','PCNP','STAT3','TYK2','MOSPD3']
+PANEL=T1+SUG+AUX+PROT+CONTEXT
+def tier(g):
+    if g in T1: return 'Tier-1'
+    if g in SUG: return 'suggestive (non-tier-1)'
+    if g in AUX: return 'Tier-2 auxiliary inverse-concordant'
+    if g in PROT: return 'Tier-2 non-concordant proteomic anchor'
+    return 'context panel'
 
 # ---------------- load ----------------
 print("loading S1 (summed raw counts)...",flush=True)

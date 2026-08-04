@@ -53,6 +53,11 @@ generators are named after the manuscript figure they produce.
    → Combined_Expression_Pre_ComBat.csv, Combined_Metadata.csv, Verified_Expression_Datasets.csv
    > DESTRUCTIVE IN-PLACE OVERWRITE: it reads EXPR_PRE / EXPR_META and writes back to the SAME paths. Running it twice, or running it on an already-filtered matrix, silently re-filters. It is not idempotent with respect to provenance and must be guarded in the release.
 
+35b. `01_transcriptome/restore_zeroed_series.py` (python) **[!]**  
+   MUST RUN BEFORE 36. Combined_Expression_Pre_ComBat.csv (16 March) carries four series as exactly zero across all 8,860 genes - GSE190847 (121 samples), GSE137143 (80), GSE172009 (8), GSE207680 (5) - because it predates the June re-harmonisation in harmonized_v2/. Restores them from the per-series harmonised matrices, mapping sample labels to GSM accessions via SOFT title / description / supplementary-filename. Asserts that no all-zero column survives and that the two zero-free strata (PBMC, whole blood) are byte-identical to the input.
+   → Combined_Expression_Pre_ComBat_REPAIRED.csv
+   > Skipping this step does not error: an all-zero series forms its own ComBat and limma batch, contributes a within-batch case-control contrast of exactly zero, and silently shrinks every effect while inflating residual df. The B-cell stratum loses 63.4% of its pooling weight. Step 36 now raises rather than continuing if any dataset is all-zero after normalisation.
+
 36. `01_transcriptome/correct_and_normalize.py` (python) **[!]**  
    Per-dataset scale detection (raw counts vs log2), CPM+log2 for counts, within-dataset quantile normalisation, merge on genes present in >=75% of datasets, then neuroCombat batch correction with condition preserved; emits PCA valid
    → Corrected_Expression_Pre_ComBat.csv, Corrected_Metadata_ComBat.csv, Corrected_Batch_Corrected_Expression.csv
@@ -120,7 +125,7 @@ generators are named after the manuscript figure they produce.
 
 **Notes:** BLOCKERS - things that would ship code that does not reproduce the paper.
 
-1. MISSING GENERATOR FOR FIGURE 2 PANEL G. Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv (Jun 15 01:03) is read verbatim by make_volcano_v_INV.py, but NO script in the project writes it. A full-tree grep for COMBINED_pantissue / COMBINED_allstrata / COMBINED_metaanalysis / properComBat matches only make_volcano_v_INV.py and its .pre* backups. Four sibling artefacts (COMBINED_allstrata_DEG.csv, COMBINED_metaanalysis_DEG.csv, COMBINED_pantissue_DEG.csv, COMBINED_properComBat_DEG.csv, all Jun 14-15) are likewise orph
+1. ~~MISSING GENERATOR FOR FIGURE 2 PANEL G~~ — **RESOLVED**: panel G now reads `Transcriptome/results/07_pan_tissue_DE.tsv` (producer `01_transcriptome/07_total_combined_de.R`). Historical description follows. Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv (Jun 15 01:03) is read verbatim by make_volcano_v_INV.py, but NO script in the project writes it. A full-tree grep for COMBINED_pantissue / COMBINED_allstrata / COMBINED_metaanalysis / properComBat matches only make_volcano_v_INV.py and its .pre* backups. Four sibling artefacts (COMBINED_allstrata_DEG.csv, COMBINED_metaanalysis_DEG.csv, COMBINED_pantissue_DEG.csv, COMBINED_properComBat_DEG.csv, all Jun 14-15) are likewise orph
 
 ## DNA methylation (array + WGBS): raw-IDAT/beta preprocessing, the two parallel ComBat M-value matrices, per-stratum limma DMP, mCSEA region enrichment, gene-level Stouffer aggregation (scripts 12-15), promoter-vs-body compartment test, and the Figure 3 generator.
 
@@ -277,6 +282,11 @@ generators are named after the manuscript figure they produce.
 1. `01_transcriptome/helpers.R` (R) **[!]**  
    Shared library sourced by every r_notebooks script. Defines PROJ_ROOT/PROT_ROOT/OUT_DIR/FIG_DIR/CACHE_DIR, the candidate gene sets (CROSS_OMICS/RECURRING/PAPER_TOP/ECM_FAMILY), and the DEP-EQUIVALENT functions that actually run in
    > Not standalone; must be sourced with cwd = Proteomics/r_notebooks. Hardcodes PROJ_ROOT at line 21.
+
+5b. `03_proteomics/dep_bh_equivalence_check.R` (R)  
+   VERIFICATION, not part of the reported pipeline. Runs DEP itself on the CSF Astral matrix with DEP::impute omitted, and compares it with the reported complete-case limma result. Establishes that the two are the same test: identical fold changes (Pearson r = 1.000), identical p-value ranking (Spearman rho = 0.9999), and, once DEP's p-values are BH-adjusted, 955 significant proteins against the 941 reported, agreeing on 1,983 of 1,995 shared proteins (99.4%).
+   → Proteomics/processed/META/CSF_Astral_DEP_BH_check.tsv
+   > DEP::test_diff hard-codes fdrtool for multiple-testing adjustment and exposes no argument to change it; on its own default it calls only 35 proteins. Every layer of this study reports Benjamini-Hochberg, which is why limma is used directly. DEP was removed from Bioconductor at release 3.23; install with remotes::install_github("arnesmits/DEP"). Two pitfalls are handled in the script: make_se and normalize_vsn both assume raw intensities and will silently compress fold changes on this already-log matrix.
 
 5. `03_proteomics/01cc_csf_astral_completecase.R` (R) **[!]**  
    CANONICAL Astral CSF (Bader & Mann) MS-vs-control differential abundance, complete-case (no imputation). Matches annotation to .raw run columns, builds MS/Control groups from MSgroup + Diagnosis_group, gene-dedups by max variance,
@@ -485,18 +495,18 @@ generators are named after the manuscript figure they produce.
 
 31. `06_figures/figure1_workflow.py` (python) **[!]**  
    FIGURE 1 (figures/image1.png) - the four-track workflow schematic. Pure matplotlib drawing, no data input; all counts and gene names are literal text in the script.
-   → image1.png (md5 544925562c884a1d370c6d47a93580d9, verified identical)
-   > STALE TIER LIST, AND THE EMBEDDED FIGURE IS STALE TOO. Line 63 still reads "Tier-1 (3): ITGB2 CD79B IKZF1" and line 64 "Tier-2 aux (9)". The manuscript now states two tier-1 (ITGB2, IKZF1) and ten Tier-2 auxiliary. Script mtime 2026-08-01 22:37, image1.png mtime 2026-08-01 22:41 
+   → image1.png (md5 d1df1ae8aa7d1a297d2c73b7e7af3624, verified identical)
+   > CURRENT: Figure 1 reports Tier-1 (2: ITGB2, IKZF1), Tier-2 auxiliary (10, including CD79B), "both tier-1 genes recovered" for the ComBat matrix, and the corrected 79-donor single-cell total.
 
 36. `06_figures/figure2_rna_volcanoes.py` (python) **[!]**  
    FIGURE 2 (figures/image2.png) - seven per-stratum RNA volcano panels (PBMC, T cells, IFN-b PBMC, B cells, whole blood, brain WM, pan-tissue) with tier-coloured candidate labels.
    → per_celltype_volcanoes_INV.png -> image2.png (md5 d1a0a7af5dcd44e98fca86c60b58ca00, verified)
-   > Tier lists are CURRENT (INV_TIER1={ITGB2,IKZF1}; CD79B in TIER2_AUX_INV). Blocking gap: panel G reads Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv (1.3 MB, 2026-06-15) and a project-wide grep finds NO script that writes it - the only files mentioning it are this generator 
+   > Tier lists are CURRENT (INV_TIER1={ITGB2,IKZF1}; CD79B in TIER2_AUX_INV). Resolved: panel G now reads Transcriptome/results/07_pan_tissue_DE.tsv. (Historically it read Poster_v2/figures/COMBINED_pantissue_proper_DEG.csv (1.3 MB, 2026-06-15) and a project-wide grep finds NO script that writes it - the only files mentioning it are this generator 
 
 41. `06_figures/figure3_methylation.py` (python) **[!]**  
    FIGURE 3 (figures/image3.png) - gene-level methylation volcanoes per stratum (A-D), combined IDAT/ComBat analysis (E) and the inverse-concordant discovery pool (F).
    → methylation_v_INV.png -> image3.png (md5 5379c4cf72a35d793eb5c58cbf4bda97, verified)
-   > Tier code is CURRENT (INV_TIER1={ITGB2,IKZF1}); only the docstring line 23 still says "Inverse-concordant Tier-1 (3): ITGB2 CD79B IKZF1" - cosmetic. It reads the *_meth_gene.tsv tables that were regenerated on 2026-08-02 02:12 by the new helpers.R; I verified mean_logFC and adj.P
+   > Tier code and documentation are CURRENT (INV_TIER1={ITGB2,IKZF1}; CD79B in the 10-gene TIER2_AUX_INV set). It reads the *_meth_gene.tsv tables that were regenerated on 2026-08-02 02:12 by the new helpers.R; I verified mean_logFC and adj.P
 
 46. `06_figures/figure4_proteomics.py` (python) **[!]**  
    FIGURE 4 (figures/image4.png) - CSF Astral/timsTOF volcanoes, UK Biobank-PPP plasma, four region-resolved brain contrasts, and the panel-H directional-consistency heatmap across seven compartments.

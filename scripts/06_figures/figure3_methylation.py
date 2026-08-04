@@ -12,7 +12,7 @@ Seven panels (3 × 3 grid):
          3. Whole blood · Ocrelizumab gene-level limma-DMP (99/16,590 sig)
   Row 2: 4. Brain WM (Huynh 2014)  gene-level CpG model (31/2,288 sig)
          5. Combined · Stouffer cross-stratum meta-analysis (461/10,863 sig;
-            all 5 Inverse-concordant Tier-1 significant)
+            both inverse-concordant Tier-1 genes significant)
          6. gene-tier legend
   Row 3: 7. inverse-concordant top-22 stacked bar (full width)
 
@@ -20,9 +20,9 @@ Seven panels (3 × 3 grid):
 only 31 sig genes and no Inverse-concordant Tier-1 hit.)
 
 Highlights (only genes that ACTUALLY pass BH-FDR<0.05 are labelled):
-  • Inverse-concordant Tier-1 (3): ITGB2 · CD79B · IKZF1 — RED *
-  • Tier-2 auxiliary inverse-concordant (7): CASP6 · CASP8 · DGKQ · MX1 · IFIT1 · NUP210 · RUNX3 — ORANGE ◆
-  • Tier-2 non-concordant (CTSZ · CHL1 · ITGAL · THRB · ICAM1 · …) — GREY
+  • Inverse-concordant Tier-1 (2): ITGB2 · IKZF1 — RED *
+  • Tier-2 auxiliary inverse-concordant (10): CD79B · LXN · CASP6 · CASP8 · DGKQ · MX1 · IFIT1 · NUP210 · RUNX3 · SH3BP4 — ORANGE ◆
+  • Tier-2 non-concordant proteomic anchors (5) — PURPLE
 """
 from pathlib import Path
 import numpy as np, pandas as pd
@@ -36,9 +36,11 @@ plt.rcParams.update({
     "font.family": "DejaVu Sans",
     "axes.titleweight": "bold",
     "axes.titlesize": 10.5,
-    "axes.labelsize": 8.5,
-    "xtick.labelsize": 7.5,
-    "ytick.labelsize": 7.5,
+    # Panels A-E inherited 8.5/7.5 from here while panel F set its own 15.2, so the volcano axes
+    # were both illegible at column width and inconsistent with F. Raised to match F and Figure 2.
+    "axes.labelsize": 15.2,
+    "xtick.labelsize": 13.0,
+    "ytick.labelsize": 13.0,
     "axes.spines.top": False, "axes.spines.right": False,
 })
 
@@ -54,33 +56,43 @@ DMP_COMB   = RES / "05_combined_meth_gene.tsv"
 BRAIN_WM   = RES / "07_BrainWM_RNA_vs_Meth_concordance.tsv"   # gene, meth, meth_fdr
 ALLMETH_COMBAT = Path("__MS_GEO_ROOT__/Methylation_Data/AllMeth_ComBat_limma_DMP_byGene.csv")  # gene, logFC, P, FDR
 
-NAVY="#0D3B66"; TEAL="#3E92CC"; RED="#D62828"; RED_HOT="#B71C1C"; ORANGE="#E65100"
+NAVY="#0D3B66"; TEAL="#3E92CC"; RED="#D62828"; RED_HOT="#B71C1C"; SUG_TEAL="#00796B"; ORANGE="#E65100"; PURPLE="#6A1B9A"
 GREY_DARK="#424242"
 
 INV_TIER1 = {"ITGB2","IKZF1"}
-TIER2_AUX_INV = {"CD79B","CASP6","CASP8","DGKQ","MX1","IFIT1","NUP210","RUNX3","SH3BP4","LXN"}
-TIER2_OTHER = {"CTSZ","CHL1","ITGAL","IFI44L","ICAM1","FOXP3","TYK2","STAT3",
-                "MOSPD3","RPAP2","THRB","SLAMF1","KLF6","HIGD1A","PCNP","DUSP22","IK",
-                "ETV3","RNF216","LYN","TRAF1","PRKCH","RBM38","RPS6KA4","ZAP70"}
+SUGGESTIVE = set()
+TIER2_AUX_INV = {"CD79B","CASP6","CASP8","DGKQ","MX1","IFIT1","NUP210","RUNX3","SH3BP4","LXN","HLA-E"}
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+TIER2_PROT = {"CTSZ","CHL1","ICAM1","ITGAL"}
 
 def gene_style(g):
     if g in INV_TIER1:
         return dict(facecolor="#ffcdd2", edgecolor=RED_HOT, lw=2.4,
                      star="* ", fontsize=13.4, fontweight="bold",
                      marker_size=140, color=RED_HOT)
+    if g in SUGGESTIVE:
+        return dict(facecolor="#e0f2f1", edgecolor=SUG_TEAL, lw=2.0,
+                     star="", fontsize=12.2, fontweight="bold",
+                     marker_size=110, color=SUG_TEAL)
     if g in TIER2_AUX_INV:
         return dict(facecolor="#fff3e0", edgecolor=ORANGE, lw=1.5,
                      star="◆ ", fontsize=11.7, fontweight="bold",
                      marker_size=90, color=ORANGE)
-    return dict(facecolor="#eeeeee", edgecolor=GREY_DARK, lw=0.9,
-                 star="", fontsize=10.6, fontweight="normal",
-                 marker_size=65, color=GREY_DARK)
+    return dict(facecolor="#f3e5f5", edgecolor=PURPLE, lw=1.1,
+                 star="", fontsize=10.8, fontweight="semibold",
+                 marker_size=70, color=PURPLE)
 
 # ── Uniform gene-level methylation volcano ──────────────────────────────────
 def gene_volcano(ax, path, title, sample_n, *, fc_col="mean_logFC",
                  fdr_col="adj.P.Val", gene_col="gene",
                  method="limma-DMP",
-                 xlabel="methylation logFC (positive = hypermethylated in MS)",
+                 # Shortened when the axis fonts were enlarged: at 15.2 pt the long form ran into
+                 # the neighbouring panel's label. The sign convention is stated in the caption.
+                 xlabel="methylation logFC (+ = hyper in MS)",
                  oth_n=4, extra_sub="", fdr_thr=0.05, sep="\t"):
     """Generic gene-level methylation volcano. x = fold-change (fc_col),
     y = −log10(BH-FDR). Only genes passing BH-FDR<0.05 are labelled."""
@@ -104,9 +116,10 @@ def gene_volcano(ax, path, title, sample_n, *, fc_col="mean_logFC",
 
     df_sig = df[sig]
     inv_rows = df_sig[df_sig.g.isin(INV_TIER1)].sort_values("fdr")
+    sug_rows = df_sig[df_sig.g.isin(SUGGESTIVE)].sort_values("fdr")
     aux_rows = df_sig[df_sig.g.isin(TIER2_AUX_INV)].sort_values("fdr").head(3)
-    oth_rows = df_sig[df_sig.g.isin(TIER2_OTHER)].sort_values("fdr").head(oth_n)
-    cands = pd.concat([inv_rows, aux_rows, oth_rows]).drop_duplicates(subset=["g"])
+    prot_rows = df_sig[df_sig.g.isin(TIER2_PROT)].sort_values("fdr").head(oth_n)
+    cands = pd.concat([inv_rows, sug_rows, aux_rows, prot_rows]).drop_duplicates(subset=["g"])
     texts = []
     for r in cands.itertuples():
         gg=r.g; x=r.fc; y=r.logp; st=gene_style(gg)
@@ -171,8 +184,10 @@ def inv_scatter(ax):
                     arrowprops=dict(arrowstyle="-", color="#888", lw=0.6))
     except Exception: pass
     ax.set_xlim(xl); ax.set_ylim(yl)
-    ax.set_xlabel("best methylation logFC   (x · + = hypermethylated in MS)", fontsize=15.2)
-    ax.set_ylabel(f"best RNA-seq logFC   (y · + = up in MS; clipped at +{YCAP:g})", fontsize=15.2)
+    ax.set_xlabel("best methylation logFC   (+ = hypermethylated in MS)", fontsize=15.2)
+    # Shortened: the old label carried the clipping threshold and overflowed the axis. The
+    # clipping is stated in the figure caption instead, where it has room to be explained.
+    ax.set_ylabel("best RNA-seq logFC   (+ = up in MS)", fontsize=15.2)
     ax.set_title("F", fontsize=28.8, fontweight="bold", loc="left", pad=6)
     ax.text(0.985,0.025,
             "every gene is inverse-concordant by construction (RNA↑·meth↓ or RNA↓·meth↑ → green quadrants)\n"
@@ -202,7 +217,7 @@ ax = fig.add_subplot(gs[1, 1])
 gene_volcano(ax, ALLMETH_COMBAT, "E", "244 MS / 231 HC",
              fc_col="logFC", fdr_col="FDR", sep=",",
              xlabel="methylation logFC (M-value, MS−HC)",
-             extra_sub="5/5 Inverse-concordant Tier-1 sig")
+             extra_sub="both Tier-1 genes significant")
 
 # Row 3 — inverse-concordant combined-evidence bar (full width)
 ax_bar = fig.add_subplot(gs[2, 0:3])
@@ -212,14 +227,16 @@ from matplotlib.patches import Patch
 legend_elements = [
     Patch(facecolor="#ffcdd2", edgecolor=RED_HOT, linewidth=2.0,
            label=f"Inverse-concordant Tier-1 ({len(INV_TIER1)} genes)"),
+    Patch(facecolor="#e0f2f1", edgecolor=SUG_TEAL, linewidth=1.6,
+           label="Suggestive, non-tier-1 (HLA-E)"),
     Patch(facecolor="#fff3e0", edgecolor=ORANGE, linewidth=1.4,
            label=f"Tier-2 auxiliary inverse-concordant ({len(TIER2_AUX_INV)} genes)"),
-    Patch(facecolor="#eeeeee", edgecolor=GREY_DARK, linewidth=0.8,
-           label="Tier-2 non-concordant proteomic anchors"),
+    Patch(facecolor="#f3e5f5", edgecolor=PURPLE, linewidth=0.9,
+           label=f"Tier-2 non-concordant proteomic anchors ({len(TIER2_PROT)} genes)"),
 ]
 ax_leg = fig.add_subplot(gs[1, 2]); ax_leg.axis("off")
 ax_leg.legend(handles=legend_elements, loc="center", frameon=True, fontsize=11,
-               title="Gene-tier highlighting\n(* Tier-1, ◆ Tier-2 auxiliary; BH-FDR<0.05 labelled)",
+               title="Evidence-group highlighting\n(* Tier-1, ◆ Tier-2 auxiliary; BH-FDR<0.05 labelled)",
                title_fontsize=12, labelspacing=0.6, borderpad=0.6, handlelength=1.4)
 
 # suptitle removed (bare A–F panel letters only)

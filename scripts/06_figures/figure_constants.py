@@ -15,36 +15,43 @@ Import pattern (works regardless of the current working directory)::
 """
 
 # ── Gene panels ──────────────────────────────────────────────────────────────
-# THE five INV-concordant Tier-1 candidates: RNA x methylation inverse-concordant,
-# BH-FDR<0.05 in *both* layers, opposite direction of effect. This is the only set
-# that should ever be labelled "Tier-1" (README + every *_INV figure).
-# HLA-E REMOVED: its bulk-RNA down-regulation did not survive proper cross-dataset
-# quantile-normalised ComBat (the prior significance was a normalization artifact).
-INV_TIER1 = ["ITGB2","IKZF1"]   # SH3BP4 reclassified to Tier-2 auxiliary
+# Canonical evidence hierarchy used by every manuscript figure and caption.
+# Tier-1 requires inverse RNA × methylation concordance plus an independent
+# donor-level single-cell or proteomic anchor.  The criterion has no exceptions.
+INV_TIER1 = ["ITGB2", "IKZF1"]
 
-# Secondary proteomic-anchor tier shown alongside INV_TIER1 on the proteomic panels.
-TIER2_PROT = ["CTSZ", "CHL1", "ICAM1", "FOXP3", "ITGAL"]
+# HLA-E is retained for biological follow-up because of its strong cell-level signal,
+# but its bulk-RNA arm did not survive cross-dataset normalisation; it is not Tier-1.
+SUGGESTIVE = ["HLA-E"]
 
-# The seven cross-omics candidates ("CO7") used by the pathway-network figures.
-# DISTINCT from INV_TIER1 — 7 cross-omics genes != 6 Tier-1. Do not conflate the two.
-CO7 = ["LXN", "SH3BP4", "CHL1", "CTSZ", "RPAP2", "PCNP", "THRB"]
-
-# Broad candidate-highlight panel, formerly (mis)named "TIER1" in v4/v5/figs4to7.
-# These are NOT the 6 Tier-1 genes — they are the wider set of candidates annotated on
-# the volcano/heatmap panels, so legends must say "candidates", never "Tier-1".
-# The order is canonical: the 17-/16-gene variants used elsewhere are strict prefixes
-# of this list (see CANDIDATE_PANEL[:N]).
-CANDIDATE_PANEL = [
-    "ITGB2", "CTSZ", "CHL1", "LXN", "THRB", "ITGAL", "CD79B", "IFI44L",
-    "IKZF1", "SH3BP4", "RPAP2", "SLAMF1", "PCNP", "STAT3", "TYK2", "ICAM1", "CASP6",
-    "MX1", "IFIT1", "MOSPD3", "FOXP3", "NUP210", "DAXX", "CASP8", "DGKQ",
+# Genes passing the inverse RNA × methylation screen without a qualifying orthogonal
+# anchor.  CD79B, LXN and SH3BP4 therefore belong here, not in Tier-1.
+TIER2_AUX_INV = [
+    "CD79B", "LXN", "SH3BP4", "CASP6", "CASP8", "DGKQ", "MX1", "IFIT1",
+    "NUP210", "RUNX3",
 ]
+
+# Strong proteomic candidates without a qualifying inverse RNA × methylation pairing.
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+TIER2_PROT = ["CTSZ", "CHL1", "ICAM1", "ITGAL"]
+
+# The strict 17-gene panel used for pathway enrichment.  HLA-E is shown separately as
+# suggestive wherever the underlying assay contains it and is never counted in a tier.
+TIERED_PANEL = INV_TIER1 + TIER2_AUX_INV + TIER2_PROT
+DISPLAY_PANEL = INV_TIER1 + SUGGESTIVE + TIER2_AUX_INV + TIER2_PROT
+
+# Backwards-compatible alias for scripts that use the wider displayed candidate set.
+CANDIDATE_PANEL = DISPLAY_PANEL
 
 # ── Cohort sizes (canonical — figure1_workflow.py / README) ────────────
 COHORTS = {
     "rna":         {"n_series": 14, "n_samples": 472},   # ComBat discovery matrix (291 MS / 181 HC); the 7 strata that produce the reported results hold 462 samples from 13 series
     "methylation": {"n_series": 9, "n_combat": 475},   # 8 arrays + GSE173787 WGBS; AllMeth ComBat = 475 samples
-    "scrna":       {"n_cohorts": 3, "n_donors": 81},   # Jäkel 9 + Kaufmann 62 (GSE144744) + Beltrán 10
+    "scrna":       {"n_cohorts": 3, "n_donors": 79},   # Jäkel 9 + Kaufmann 62 (GSE144744) + Beltrán 8 unique donors
 }
 
 # ── Proteomic datasets (canonical labels — figure4_proteomics.py) ──────────

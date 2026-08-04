@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""figure5_singlecell.py — composite Figure 6 v3 with
-Inverse-concordant Tier-1 priority highlighting.
+"""Figure 5: single-cell validation with the current evidence hierarchy.
 
-Re-organises the heatmap with:
-  - Inverse-concordant Tier-1 (6 genes) at TOP, label colour = red bold
-  - Tier-2 auxiliary inverse-concordant (7 genes) middle, label colour = orange
-  - Other aux candidates (non-concordant) at bottom, label colour = grey
-  - Thick horizontal separator lines between tiers
-  - Panel C gene UMAP overlays focus on Inverse-concordant Tier-1 (HLA-E, ITGB2, LXN, CD79B,
-    IKZF1, SH3BP4) plus the auxiliary inverse-concordant gene CASP6
+The heatmap separates two inverse-concordant Tier-1 genes,
+ten Tier-2 auxiliary inverse-concordant genes, five non-concordant proteomic
+anchors, and three contextual immune genes.  Panel C uses the same colours.
 """
 import scanpy as sc
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
@@ -29,20 +26,28 @@ plt.rcParams.update({'font.family':'DejaVu Sans','font.size':14.4})
 
 # Tiered gene lists ─────────────────────────────────────────────────────────
 INV_TIER1 = ["ITGB2","IKZF1"]
-SUGGESTIVE = ["HLA-E"]   # demoted: suggestive, non-tier-1 (single-cell only)
-TIER2_INV_AUX = ["LXN", "CD79B", "SH3BP4", "CASP6", "CASP8", "DGKQ", "MX1", "IFIT1", "NUP210", "RUNX3"]
-TIER2_OTHER = ["CTSZ", "CHL1", "ITGAL", "IFI44L", "ICAM1", "FOXP3", "TYK2", "STAT3"]
-ALL_GENES = INV_TIER1 + SUGGESTIVE + TIER2_INV_AUX + TIER2_OTHER
+SUGGESTIVE = []   # HLA-E is now Tier-2 auxiliary: both discovery arms significant, no anchor
+TIER2_INV_AUX = ["CD79B", "LXN", "HLA-E", "SH3BP4", "CASP6", "CASP8", "DGKQ", "MX1", "IFIT1", "NUP210", "RUNX3"]
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+TIER2_PROT = ["CTSZ", "CHL1", "ICAM1", "ITGAL"]
+CONTEXT = ["IFI44L", "TYK2", "STAT3"]
+ALL_GENES = INV_TIER1 + SUGGESTIVE + TIER2_INV_AUX + TIER2_PROT + CONTEXT
 
 COL_INV   = "#C62828"   # red bold
+COL_SUG   = "#00796B"   # teal, suggestive and explicitly non-tier-1
 COL_AUX   = "#E65100"   # orange
-COL_OTHER = "#616161"   # grey
-COL_SUG   = "#9C27B0"   # purple (suggestive, non-tier-1)
+COL_PROT  = "#6A1B9A"   # purple, non-concordant proteomic anchor
+COL_OTHER = "#616161"   # grey context
 
 def label_color(gene):
     if gene in INV_TIER1: return COL_INV, 'bold'
     if gene in SUGGESTIVE: return COL_SUG, 'bold'
     if gene in TIER2_INV_AUX: return COL_AUX, 'semibold'
+    if gene in TIER2_PROT: return COL_PROT, 'semibold'
     return COL_OTHER, 'normal'
 
 COHORTS = [
@@ -76,7 +81,7 @@ for c in COHORTS:
 pb = pd.read_csv(PB, sep="\t")
 print(f"Wilcoxon tests: {len(pb)}, sig BH-FDR<0.05: {(pb.fdr<0.05).sum()}")
 
-# Build heatmap row order = INV_TIER1 then TIER2_INV_AUX then TIER2_OTHER
+# Build the heatmap in the same evidence-group order used throughout the manuscript.
 pb["co_ct"] = pb["cohort"] + "  ·  " + pb["cell_type"]
 heat_d   = pb.pivot_table(index="gene", columns="co_ct", values="logFC", aggfunc="mean").clip(-2.5,2.5)
 heat_fdr = pb.pivot_table(index="gene", columns="co_ct", values="fdr",  aggfunc="min")  # Benjamini–Hochberg FDR over all 629 candidate gene × cell-type tests (multiple-testing corrected)
@@ -200,6 +205,7 @@ for i in range(heat_d.shape[0]):
 n_t1  = sum(1 for g in row_order if g in INV_TIER1)
 n_sug = sum(1 for g in row_order if g in SUGGESTIVE)
 n_aux = sum(1 for g in row_order if g in TIER2_INV_AUX)
+n_prot = sum(1 for g in row_order if g in TIER2_PROT)
 N_rows = len(row_order)
 # inverse-concordant Tier-1 block
 ax_heat.axhline(n_t1 - 0.5, color='#000', linewidth=2.0, alpha=0.7)
@@ -218,11 +224,21 @@ if n_aux:
     ax_heat.text(-2.3, n_t1 + n_sug + n_aux/2 - 0.5, "Tier-2 auxiliary\ninverse-concordant",
                   ha='right', va='center', fontsize=14.4, fontweight='semibold',
                   color=COL_AUX, transform=ax_heat.transData)
-# non-concordant block
-if n_t1 + n_sug + n_aux < N_rows:
-    ax_heat.text(-2.3, n_t1 + n_sug + n_aux + (N_rows - n_t1 - n_sug - n_aux)/2 - 0.5,
-                  "non-concordant\naux", ha='right', va='center',
-                  fontsize=14.4, color=COL_OTHER, transform=ax_heat.transData)
+# Tier-2 proteomic-anchor block
+if n_prot:
+    ax_heat.axhline(n_t1 + n_sug + n_aux + n_prot - 0.5,
+                    color='#000', linewidth=1.2, alpha=0.5, linestyle='-.')
+    ax_heat.text(-2.3, n_t1 + n_sug + n_aux + n_prot/2 - 0.5,
+                  "Tier-2 non-concordant\nproteomic anchors",
+                  ha='right', va='center', fontsize=13.6,
+                  fontweight='semibold', color=COL_PROT,
+                  transform=ax_heat.transData)
+# Context block
+n_context = N_rows - n_t1 - n_sug - n_aux - n_prot
+if n_context:
+    ax_heat.text(-2.3, n_t1 + n_sug + n_aux + n_prot + n_context/2 - 0.5,
+                  "immune context", ha='right', va='center',
+                  fontsize=13.6, color=COL_OTHER, transform=ax_heat.transData)
 
 ax_heat.set_xticks(range(heat_d.shape[1]))
 short_cols=[c.replace("Jakel_2019_brain","Jäkel").replace("Ramesh_2020_PBMC","Kaufmann").replace("Beltran_2019_CSFPBMC","Beltrán").replace("Microglia_Macrophages","Microglia/Mac").replace("Endothelial_cells","Endo").replace("  ·  "," · ") for c in heat_d.columns]
@@ -250,7 +266,6 @@ inner = GridSpecFromSubplotSpec(3, 5, subplot_spec=gs[5:7, :],
 for row, (cohort, ad) in enumerate(zip(COHORTS, ads)):
     U = ad.obsm["X_umap"]
     X = ad.X
-    if issparse(X): X = X.toarray()
     for c_idx, gene in enumerate(cohort["genes"]):
         ax_g = fig.add_subplot(inner[row, c_idx])
         if row == 0 and c_idx == 0:
@@ -263,7 +278,11 @@ for row, (cohort, ad) in enumerate(zip(COHORTS, ads)):
             for sp in ax_g.spines.values(): sp.set_visible(False)
             continue
         gi = list(ad.var_names).index(gene)
+        # Extract one column at a time; densifying the full Jäkel matrix would
+        # allocate several gigabytes only to draw five expression overlays.
         expr = X[:, gi]
+        if issparse(expr): expr = expr.toarray()
+        expr = np.asarray(expr).ravel()
         vmax = np.quantile(expr[expr > 0], 0.99) if (expr > 0).sum() else 1.0
         order = np.argsort(expr)
         sc_plot = ax_g.scatter(U[order,0], U[order,1], c=expr[order],

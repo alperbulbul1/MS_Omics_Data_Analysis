@@ -123,8 +123,21 @@ def run():
     print("STEP 1: Loading combined expression data")
     print("=" * 60)
 
-    # Load the pre-combat combined matrix and metadata
-    combined_expr = pd.read_csv(os.path.join(dest_dir, "Combined_Expression_Pre_ComBat.csv"), index_col=0)
+    # Load the pre-combat combined matrix and metadata.
+    #
+    # Prefer the repaired matrix. Combined_Expression_Pre_ComBat.csv (16 March) carries four series
+    # - GSE190847, GSE137143, GSE172009, GSE207680, 214 of 552 columns - as exactly zero across
+    # every gene, because it predates the June re-harmonisation in harmonized_v2/. Reading it
+    # directly silently drops 63.4% of the B-cell stratum's pooling weight. restore_zeroed_series.py
+    # rebuilds those four series from the per-series harmonised matrices and writes the _REPAIRED
+    # file; run it first.
+    repaired = os.path.join(dest_dir, "Combined_Expression_Pre_ComBat_REPAIRED.csv")
+    src = repaired if os.path.exists(repaired) else os.path.join(dest_dir, "Combined_Expression_Pre_ComBat.csv")
+    if src != repaired:
+        print("WARNING: repaired matrix not found; falling back to the March matrix, which contains "
+              "all-zero series. Run restore_zeroed_series.py first.")
+    print(f"Input matrix: {os.path.basename(src)}")
+    combined_expr = pd.read_csv(src, index_col=0)
     combined_meta = pd.read_csv(os.path.join(dest_dir, "Combined_Metadata.csv"))
 
     # Filter only MS / HC
@@ -149,6 +162,17 @@ def run():
         ds_expr = combined_expr[ds_samples].copy()
         print(f"\n  Processing {ds}: {len(ds_samples)} samples × {ds_expr.shape[0]} genes")
         ds_norm = normalize_dataset(ds_expr, ds)
+        # Guard against the defect described above recurring silently. An all-zero dataset survives
+        # every downstream step without error: it forms its own ComBat batch and its own limma batch
+        # level, contributes a within-batch case-control contrast of exactly zero, and so shrinks
+        # every effect estimate by a fixed factor while inflating the residual degrees of freedom.
+        # It must be a hard failure, not a warning.
+        if float(np.nanmax(np.abs(ds_norm.values))) == 0.0:
+            raise ValueError(
+                f"{ds} is all-zero after normalisation ({ds_norm.shape[1]} samples). This is the "
+                f"stale-input defect: run restore_zeroed_series.py, or check that {ds} is present "
+                f"and non-empty in Expression_Data/harmonized_v2/{ds}_symbol_matrix.csv."
+            )
         normalized_datasets[ds] = ds_norm
         print(f"  → Normalized range: [{ds_norm.values.min():.2f}, {ds_norm.values.max():.2f}]  median={np.nanmedian(ds_norm.values):.2f}")
 

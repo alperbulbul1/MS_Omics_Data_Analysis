@@ -25,12 +25,27 @@ PROJ = Path("__MS_GEO_ROOT__")
 OUT  = PROJ / "Poster_v2" / "figures" / "proteomics_v_INV.png"
 
 INV_TIER1  = ["ITGB2","IKZF1"]
-TIER2_PROT = ["CTSZ","CHL1","ICAM1","FOXP3","ITGAL"]
-RED_HOT="#B71C1C"; PURPLE="#6A1B9A"
+# Tier-2 auxiliary inverse-concordant genes shown in the proteomic panels. Only LXN is carried
+# here: it is the auxiliary gene whose (nominal) proteomic support the text cites, and it is
+# quantified in the brain contrasts and in UK Biobank plasma. It falls below the completeness
+# threshold on both CSF instruments, so it is legitimately absent from panels A and B.
+# Coloured ORANGE, the Tier-2 auxiliary inverse-concordant colour used in Figures 2, 3 and 6.
+# NOT purple: purple denotes the Tier-2 non-concordant PROTEOMIC ANCHORS (CTSZ/CHL1/ICAM1),
+# a different subcategory. NOT teal: teal is reserved for the suggestive candidate HLA-E.
+TIER2_AUX  = ["LXN"]
+# FOXP3 was removed from this group on revision: it is not quantified in ANY of the seven
+# proteomic compartments (both CSF instruments, all four brain-region contrasts, UK Biobank-PPP),
+# so it could not be a "strong proteomic candidate", which is what defines this group. It is
+# retained in the STRING display as a canonical MS immune context gene, which is the role it
+# actually plays (the IKZF1-RUNX3/FOXP3-STAT1-STAT3 axis).
+TIER2_PROT = ["CTSZ","CHL1","ICAM1","ITGAL"]
+RED_HOT="#B71C1C"; PURPLE="#6A1B9A"; ORANGE="#E65100"   # ORANGE = Tier-2 auxiliary inverse-concordant, as in Figures 2, 3 and 6
 
 def gene_style(g):
     if g in INV_TIER1:
         return dict(color=RED_HOT, fc="#ffcdd2", marker_c="#D32F2F", fs=9, fw="bold", ms=170)
+    if g in TIER2_AUX:
+        return dict(color=ORANGE, fc="#FFE0B2", marker_c="#F57C00", fs=8.7, fw="bold", ms=150)
     if g in TIER2_PROT:
         return dict(color=PURPLE, fc="#E1BEE7", marker_c="#8E24AA", fs=8.4, fw="bold", ms=135)
     return None
@@ -92,13 +107,13 @@ def volcano(ax, df, xcol, ycol, sigmask, title, subtitle, xlabel,
     ax.scatter(df.loc[dn,xcol], df.loc[dn,ycol], s=8, c="#1976D2", alpha=0.6,
                 edgecolors='none', rasterized=True, label=f"MS↓ (n={int(dn.sum())})")
     texts=[]
-    for tier in (INV_TIER1, TIER2_PROT):
+    for tier in (INV_TIER1, TIER2_AUX, TIER2_PROT):
         for g in tier:
             r=df[df.gene.str.upper()==g.upper()]
             if not len(r): continue
             r=r.iloc[0]; st=gene_style(g)
             ax.scatter(r[xcol], r[ycol], s=st["ms"], c=st["marker_c"],
-                        marker="*" if g in INV_TIER1 else "D",
+                        marker="*" if g in INV_TIER1 else ("o" if g in TIER2_AUX else "D"),
                         edgecolors='#000', linewidth=0.6, zorder=10)
             texts.append(ax.text(r[xcol], r[ycol], g, fontsize=st["fs"],
                           fontweight=st["fw"], fontstyle='italic', color=st["color"],
@@ -157,7 +172,7 @@ for _bk,((k,df),(r,c0,c1)) in enumerate(zip(mags.items(), brain_axes_pos)):
 
 # ── ROW 3: directional-consistency heatmap (7 compartments) ────────────────
 ax = fig.add_subplot(gs[2, 1:11])
-GENES_D = INV_TIER1 + TIER2_PROT
+GENES_D = INV_TIER1 + TIER2_AUX + TIER2_PROT
 COLS_D = [
     ("CSF Astral","astral"), ("CSF timsTOF","ctimstof"),
     ("Brain CTX","CTX"), ("Brain NAWM","NAWM"),
@@ -210,12 +225,14 @@ for i in range(len(GENES_D)):
         else:
             ax.text(j,i,"n.q.",ha='center',va='center',fontsize=9.6,color='#999')
 ax.axhline(len(INV_TIER1)-0.5, color='#000', linewidth=2.0)
+ax.axhline(len(INV_TIER1)+len(TIER2_AUX)-0.5, color='#000', linewidth=1.1)
 ax.axvline(1.5, color='#000', lw=1.3); ax.axvline(5.5, color='#000', lw=1.3); ax.axvline(6.5, color='#000', lw=1.3)
 ax.text(-1.5,(len(INV_TIER1)-1)/2,"Inverse-concordant Tier-1",ha='right',va='center',fontsize=14.4,fontweight='bold',color=RED_HOT)
-ax.text(-1.5,len(INV_TIER1)+(len(TIER2_PROT)-1)/2,"Tier-2\nprot anchor",ha='right',va='center',fontsize=13.6,fontweight='bold',color=PURPLE)
+ax.text(-1.5,len(INV_TIER1)+(len(TIER2_AUX)-1)/2,"Tier-2 aux\n(LXN)",ha='right',va='center',fontsize=12.4,fontweight='bold',color=ORANGE)
+ax.text(-1.5,len(INV_TIER1)+len(TIER2_AUX)+(len(TIER2_PROT)-1)/2,"Tier-2\nprot anchor",ha='right',va='center',fontsize=13.6,fontweight='bold',color=PURPLE)
 ax.set_xticks(range(len(COLS_D))); ax.set_xticklabels([c[0] for c in COLS_D],rotation=35,ha='right',fontsize=14.4)
 ax.set_yticks(range(len(GENES_D))); ax.set_yticklabels(GENES_D,fontsize=15.2,fontstyle='italic',fontweight='bold')
-for tick,g in zip(ax.get_yticklabels(),GENES_D): tick.set_color(RED_HOT if g in INV_TIER1 else PURPLE)
+for tick,g in zip(ax.get_yticklabels(),GENES_D): tick.set_color(RED_HOT if g in INV_TIER1 else (ORANGE if g in TIER2_AUX else PURPLE))
 ax.set_title("H", fontsize=28.8, fontweight="bold", loc="left", pad=4)
 cbar=plt.colorbar(sm,ax=ax,fraction=0.018,pad=0.01); cbar.set_label("log₂FC / β  (coloured only where significant)",fontsize=12.8); cbar.ax.tick_params(labelsize=12.0)
 

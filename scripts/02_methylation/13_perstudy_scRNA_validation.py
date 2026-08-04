@@ -51,9 +51,20 @@ SC_RAW = PROJ / "SingleCell_CELLxGENE" / "data"
 FIG    = PROJ / "Methylation" / "figures"
 
 CO7 = ["LXN","SH3BP4","CHL1","CTSZ","RPAP2","PCNP","THRB"]
+# Tier-2 non-concordant proteomic anchors. They are displayed in the Figure 6 intersection
+# matrix, which carries an scRNA block, so they must be tested there rather than left blank.
+# The legacy CO7 list predates the current tiering and happened to cover only CTSZ and CHL1,
+# which is why ICAM1, ITGAL and FOXP3 were silently missing from the scRNA columns.
+PROT_ANCHORS = ["ICAM1","ITGAL","FOXP3"]
+# Every gene displayed in Figure 6 must be tested here, or it shows an empty scRNA block that reads
+# as "no effect" when it actually means "never tested". CO7 + the top-30 inverse-concordant cut
+# covered 17 of the 18 by luck: CASP8 ranks 41st on that ordering (one pairing) and SH3BP4 31st,
+# and only SH3BP4 happened to sit in the legacy CO7 list.
+DISPLAY_PANEL = ["ITGB2","IKZF1","HLA-E","CD79B","LXN","SH3BP4","CASP6","CASP8","DGKQ","MX1",
+                 "IFIT1","NUP210","RUNX3","CTSZ","CHL1","ICAM1","FOXP3","ITGAL"]
 inv = pd.read_csv(ME / "INVERSE_CONCORDANT_by_gene.tsv", sep="\t")
 INV_TOP = inv.sort_values(["n_pairings","best_rna_fdr"], ascending=[False, True]).gene.tolist()[:30]
-GENE_PANEL = list(dict.fromkeys(CO7 + INV_TOP))
+GENE_PANEL = list(dict.fromkeys(CO7 + PROT_ANCHORS + DISPLAY_PANEL + INV_TOP))
 print(f"Gene panel: {len(GENE_PANEL)} genes  (CO7 + top 30 inverse)")
 
 
