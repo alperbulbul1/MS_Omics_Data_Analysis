@@ -27,7 +27,6 @@ Every script ships with the placeholders `__MS_GEO_ROOT__` (project root) and `_
 | `build_matrices.py` | Builds the per-series expression matrices with Ensembl → symbol resolution. |
 | `build_global_matrices.py` | Builds the combined global matrix, parsing SOFT headers for MS/HC labels without loading the full tables. |
 | `merge_and_correct.py` | Merges the recovered supplementary datasets into the global matrix and re-runs neuroComBat and limma. |
-| **`restore_zeroed_series.py`** | **Repair step that must run BEFORE `correct_and_normalize.py`.** Four series (GSE190847, GSE137143, GSE172009, GSE207680; 214 of 552 columns) were carried as exactly zero in the March matrix; this restores them from the harmonised per-series matrices. Two fatal self-checks: no all-zero column may survive, and the PBMC and whole-blood strata must reproduce byte-identically. |
 | `correct_and_normalize.py` | Per-dataset normalisation and ComBat batch correction with disease status protected; prefers the repaired matrix and raises on any all-zero dataset. |
 | `rerun_verified_case_control.py` | Re-runs the case-control analyses against the verified dataset inventory. |
 | `00_run_all.R` | Runs every transcriptome step in order. |
